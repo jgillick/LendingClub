@@ -100,6 +100,8 @@ class Session():
         The problem is that LendingClub doesn't seem to have a login API that we can access directly,
         so the code has to try to decide if the login worked or not by looking at the URL redirect and
         parsing the returned HTML for errors.
+
+        Returns True or throws an exception (NetworkError or AuthenticationError)
         """
 
         self.__log('Attempting to authenticate')
@@ -107,8 +109,13 @@ class Session():
         # Get email and password
         if email is None:
             email = self.email
+        else:
+            self.email = email
+
         if password is None:
             password = self.__pass
+        else:
+            self.__pass = password
 
         # Start session
         session = requests.Session()

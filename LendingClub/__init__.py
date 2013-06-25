@@ -29,14 +29,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import os
 import logging
-from LendingClub import util
+from bs4 import BeautifulSoup
+from LendingClub.session import Session
 
 
 class LendingClub:
     logger = None
+    session = Session()
 
     def __init__(self, email=None, password=None, logger=None):
+        self.session = Session()
+
         if email is not None:
             self.authenticate(email, password)
 
@@ -51,20 +56,18 @@ class LendingClub:
 
     def set_logger(self, logger):
         self.logger = logger
-        util.set_logger(self.logger)
+        self.session.set_logger(self.logger)
 
     def authenticate(self, email, password):
         """
         Attempt to authenticate the user.
-        Returns True/False
+        Returns True or throws an exception
         """
         try:
-            if util.start_session(email, password):
-                self.authed = True
+            if self.session.authenticate(email, password):
                 return True
         except Exception as e:
             raise e
-        raise Exception('An unknown error occurred')
 
     def version(self):
         """
@@ -86,7 +89,7 @@ class LendingClub:
             'method': 'search',
             'filter': filters
         }
-        response = util.post_url('/browse/browseNotesAj.action', data=payload)
+        response = self.session.post('/browse/browseNotesAj.action', data=payload)
         jsonRes = response.json()
         return jsonRes
 
@@ -105,7 +108,7 @@ class LendingClub:
                 'max_per_note': filters['max_per_note'],
                 'filter': filters
             }
-            response = util.post_url('/portfolio/lendingMatchOptionsV2.action', data=payload)
+            response = self.session.post('/portfolio/lendingMatchOptionsV2.action', data=payload)
             resJson = response.json()
 
             if resJson['result'] == 'success' and 'lmOptions' in resJson:
@@ -127,7 +130,7 @@ class LendingClub:
         """
         strutToken = ''
         try:
-            response = util.get_url('/portfolio/placeOrder.action')
+            response = self.session.get('/portfolio/placeOrder.action')
             soup = BeautifulSoup(response.text, "html5lib")
             strutTokenTag = soup.find('input', {'name': 'struts.token'})
             if strutTokenTag:
@@ -154,7 +157,7 @@ class LendingClub:
                 'lending_match_point': investmentOption['optIndex'],
                 'lending_match_version': 'v2'
             }
-            util.get_url('/portfolio/recommendPortfolio.action', params=payload)
+            self.session.get('/portfolio/recommendPortfolio.action', query=payload)
 
             # Get struts token
             return self.get_strut_token()
@@ -180,7 +183,7 @@ class LendingClub:
             if strutToken:
                 payload['struts.token.name'] = 'struts.token'
                 payload['struts.token'] = strutToken
-            response = util.post_url('/portfolio/orderConfirmed.action', data=payload)
+            response = self.session.post('/portfolio/orderConfirmed.action', data=payload)
 
             # Process HTML
             html = response.text
@@ -244,7 +247,7 @@ class LendingClub:
                     paramData['method'] = 'createLCPortfolio'
 
                 # Send
-                response = util.post_url('/data/portfolioManagement', params=paramData, data=postData)
+                response = self.session.post('/data/portfolioManagement', query=paramData, data=postData)
                 resText = response.text
                 resJson = response.json()
 
@@ -274,16 +277,24 @@ class LendingClub:
 
     def get_cash_balance(self):
         """
-        Returns the cash balance available to invest
+        Returns the cash balance available to invest or -1 if there was an error
         """
         cash = -1
         try:
-            response = util.get_url('/browse/cashBalanceAj.action')
+            response = self.session.get('/browse/cashBalanceAj.action')
             jsonRes = response.json()
 
             if jsonRes['result'] == 'success':
                 self.logger.debug('Cash available: {0}'.format(jsonRes['cashBalance']))
-                cash = util.currency_to_float(jsonRes['cashBalance'])
+                cash_value = jsonRes['cashBalance']
+
+                # Convert currency to float value
+                # Match values like $1,000.12 or 1,0000$
+                cash_match = re.search('^[^0-9]?([0-9\.,]+)[^0-9]?', cash_value)
+                if cash_match:
+                    cash_str = cashMatch.group(1)
+                    cash_str = cashStr.replace(',', '')
+                    cash = float(cashStr)
             else:
                 self.logger.error('Could not get cash balance: {0}'.format(response.text))
 
@@ -298,7 +309,7 @@ class LendingClub:
         """
         foliosNames = []
         try:
-            response = util.get_url('/data/portfolioManagement?method=getLCPortfolios')
+            response = self.session.get('/data/portfolioManagement?method=getLCPortfolios')
             jsonRes = response.json()
 
             # Get portfolios and create a list of names
