@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 from requests.exceptions import *
 
 
-class Session():
+class Session:
 
     email = None
     __pass = None

@@ -1,0 +1,14 @@
+{
+  "message": [],
+  "result": "success",
+  "portfolioName": "Existing Portfolio",
+  "updates": [
+    {
+      "portfolioId": 1234567,
+      "portfolioName": "Existing Portfolio",
+      "orderId": 23455678,
+      "record_id": "4567890",
+      "loanId": 3456789
+    }
+  ]
+}

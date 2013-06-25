@@ -58,6 +58,14 @@ class LendingClub:
         self.logger = logger
         self.session.set_logger(self.logger)
 
+    def version(self):
+        """
+        Return the version number of the Lending Club Investor tool
+        """
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        version_file = os.path.join(this_path, 'VERSION')
+        return open(version_file).read()
+
     def authenticate(self, email, password):
         """
         Attempt to authenticate the user.
@@ -68,14 +76,6 @@ class LendingClub:
                 return True
         except Exception as e:
             raise e
-
-    def version(self):
-        """
-        Return the version number of the Lending Club Investor tool
-        """
-        this_path = os.path.dirname(os.path.realpath(__file__))
-        version_file = os.path.join(this_path, 'VERSION')
-        return open(version_file).read()
 
     def browse_notes(self, filter):
         """

@@ -1,0 +1,22 @@
+Starting server at 127.1.0.0.127.iGET / {}
+GET /favicon.ico {}
+GET / {}
+GET /favicon.ico {}
+GET / {}
+GET /favicon.ico {}
+GET / {}
+GET /favicon.ico {}
+GET / {}
+GET /favicon.ico {}
+GET / {}
+GET /favicon.ico {}
+25/Jun/2013 16:12:58] "GET / HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:12:58] "GET /favicon.ico HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:12:59] "GET / HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:12:59] "GET /favicon.ico HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:13:42] "GET / HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:13:42] "GET /favicon.ico HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:13:43] "GET / HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:13:43] "GET /favicon.ico HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:15:45] "GET / HTTP/1.1" 200 -
+1.0.0.127.in-addr.arpa - - [25/Jun/2013 16:15:45] "GET /favicon.ico HTTP/1.1" 200 -

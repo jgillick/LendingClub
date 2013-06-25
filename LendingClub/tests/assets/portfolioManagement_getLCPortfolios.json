@@ -1,0 +1,29 @@
+{
+  "message": [],
+  "result": "success",
+  "results": [
+    {
+      "portfolioName": "Existing Portfolio",
+      "portfolioId": 12345,
+      "rate": "20.03%",
+      "amountLent": 10000,
+      "loanCount": 72,
+      "expectedMonthlyPayment": 250.4,
+      "principalRemaining": "9809.15",
+      "paymentReceived": "633.37",
+      "portfolioDesc": "My initial investment"
+    },
+    {
+      "portfolioName": "Second",
+      "portfolioId": 67890,
+      "rate": "17%",
+      "amountLent": 15000,
+      "loanCount": 80,
+      "expectedMonthlyPayment": 320.2,
+      "principalRemaining": "14542.17",
+      "paymentReceived": "400.12",
+      "portfolioDesc": ""
+    }
+  ],
+  "resultcount": 0
+}

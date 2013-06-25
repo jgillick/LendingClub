@@ -1,0 +1,53 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Lending Club Login - Lending Club</title>
+</head>
+<body  class="master_full-width mobile">
+	<div class="master_wrapper">
+		<div id="master_content" class="master_clearfix">
+			<div id="master_content-mid" class="master_clearfix">
+				<div id="master_main-content">
+					<div id="master_content-header">
+						<h1>Lending Club Login</h1>
+					</div>
+					<div id="master_content-left" >
+						<div class="master_message-wrapper ">
+							<div id="master_error-list" class="master_pngfix master_message master_error  active ">
+								Password must have 8 or more characters, with at least 1 number and 1 letter<br>
+							</div>
+						</div>
+						<div class="master_content-outer-container">
+							<div id="container">
+								<div id="login">
+									<h3>Member Sign-In</h3>
+									<form action="/account/login.action" method="post" class="vertical">
+										<div>
+											<input type="hidden" name="login_url" value="" />
+										</div>
+										<div class="row">
+											<label for="email">Email Address</label>
+											<input type="text" class="text" id="email" name="login_email" value="" maxlength="50" />
+										</div>
+										<div class="row">
+											<label for="password">Password</label>
+											<input autocomplete="off" type="password" class="text" id="password" name="login_password" value="" maxlength="40" />
+											<a class="label-after" href="/account/forgotPassword.action">Forgot password</a>
+										</div>
+										<div class="row label-after">
+											<input type="checkbox" class="checkbox" id="remember" name="login_remember_me" checked="checked" /><label for="remember" class="rememberMe"> Remember me on this computer</label>
+										</div>
+										<div class="row label-after">
+											<input id="master_accountSubmit" class="hover master_pngfix" type="submit" value="Sign In &#187;" />
+										</div>
+									</form>
+								</div> <!-- login -->
+							</div> <!-- container -->
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
