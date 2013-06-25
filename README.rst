@@ -1,5 +1,5 @@
-LendingClub API
-===============
+Lending Club API
+================
 
 An attempt to extract the API from the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project into a standalone API module. The currently committed code does not work yet, but should soon. Until then, you should be able to use the modules from the auto investor project.
 
