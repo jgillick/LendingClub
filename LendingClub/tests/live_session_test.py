@@ -9,7 +9,7 @@ sys.path.insert(0, '.')
 sys.path.insert(0, '../')
 sys.path.insert(0, '../../')
 
-from LendingClub import session
+from lendingclub import session
 
 
 class LiveTestSession(unittest.TestCase):

@@ -9,7 +9,7 @@ sys.path.insert(0, '.')
 sys.path.insert(0, '../')
 sys.path.insert(0, '../../')
 
-from LendingClub import LendingClub
+from lendingclub import LendingClub
 
 
 class TestLendingClub(unittest.TestCase):
