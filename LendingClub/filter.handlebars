@@ -39,7 +39,7 @@
             ]
         },
         "m_value": [
-        {{#if term_36}}
+        {{#if term.Year3}}
             {
                 "value": "Year3",
                 "label": "36-month",
@@ -47,7 +47,7 @@
                 "valueIndex": 0
             },
         {{/if}}
-        {{#if term_60}}
+        {{#if term.Year5}}
             {
                 "value": "Year5",
                 "label": "60-month",
@@ -98,7 +98,6 @@
         "m_visible": false,
         "m_position": 0
     },
-    {{#if funding_progress}}
     {
         "m_id": 15,
         "m_metadata": {
@@ -196,7 +195,6 @@
         "m_visible": false,
         "m_position": 0
     },
-    {{/if}}
     {
         "m_id": 10,
         "m_metadata": {
@@ -209,43 +207,43 @@
                 },
                 {
                     "value": "D",
-                    "label": "<span class=\\"grades d-loan-grade\\">D</span> 18.76%",
+                    "label": "<span class=\"grades d-loan-grade\">D</span> 18.76%",
                     "sqlValue": null,
                     "valueIndex": 1
                 },
                 {
                     "value": "A",
-                    "label": "<span class=\\"grades a-loan-grade\\">A</span> 7.41%",
+                    "label": "<span class=\"grades a-loan-grade\">A</span> 7.41%",
                     "sqlValue": null,
                     "valueIndex": 2
                 },
                 {
                     "value": "E",
-                    "label": "<span class=\\"grades e-loan-grade\\">E</span> 21.49%",
+                    "label": "<span class=\"grades e-loan-grade\">E</span> 21.49%",
                     "sqlValue": null,
                     "valueIndex": 3
                 },
                 {
                     "value": "B",
-                    "label": "<span class=\\"grades b-loan-grade\\">B</span> 12.12%",
+                    "label": "<span class=\"grades b-loan-grade\">B</span> 12.12%",
                     "sqlValue": null,
                     "valueIndex": 4
                 },
                 {
                     "value": "F",
-                    "label": "<span class=\\"grades f-loan-grade\\">F</span> 23.49%",
+                    "label": "<span class=\"grades f-loan-grade\">F</span> 23.49%",
                     "sqlValue": null,
                     "valueIndex": 5
                 },
                 {
                     "value": "C",
-                    "label": "<span class=\\"grades c-loan-grade\\">C</span> 15.80%",
+                    "label": "<span class=\"grades c-loan-grade\">C</span> 15.80%",
                     "sqlValue": null,
                     "valueIndex": 6
                 },
                 {
                     "value": "G",
-                    "label": "<span class=\\"grades g-loan-grade\\">G</span> 24.84%",
+                    "label": "<span class=\"grades g-loan-grade\">G</span> 24.84%",
                     "sqlValue": null,
                     "valueIndex": 7
                 }
@@ -277,7 +275,7 @@
             {{#if grades.D}}
             {
                 "value": "D",
-                "label": "<span class=\\"grades d-loan-grade\\">D</span> 18.76%",
+                "label": "<span class=\"grades d-loan-grade\">D</span> 18.76%",
                 "sqlValue": null,
                 "valueIndex": 1
             },
@@ -285,7 +283,7 @@
             {{#if grades.A}}
             {
                 "value": "A",
-                "label": "<span class=\\"grades a-loan-grade\\">A</span> 7.41%",
+                "label": "<span class=\"grades a-loan-grade\">A</span> 7.41%",
                 "sqlValue": null,
                 "valueIndex": 2
             },
@@ -293,7 +291,7 @@
             {{#if grades.E}}
             {
                 "value": "E",
-                "label": "<span class=\\"grades e-loan-grade\\">E</span> 21.49%",
+                "label": "<span class=\"grades e-loan-grade\">E</span> 21.49%",
                 "sqlValue": null,
                 "valueIndex": 3
             },
@@ -301,7 +299,7 @@
             {{#if grades.B}}
             {
                 "value": "B",
-                "label": "<span class=\\"grades b-loan-grade\\">B</span> 12.12%",
+                "label": "<span class=\"grades b-loan-grade\">B</span> 12.12%",
                 "sqlValue": null,
                 "valueIndex": 4
             },
@@ -309,7 +307,7 @@
             {{#if grades.F}}
             {
                 "value": "F",
-                "label": "<span class=\\"grades f-loan-grade\\">F</span> 23.49%",
+                "label": "<span class=\"grades f-loan-grade\">F</span> 23.49%",
                 "sqlValue": null,
                 "valueIndex": 5
             },
@@ -317,7 +315,7 @@
             {{#if grades.C}}
             {
                 "value": "C",
-                "label": "<span class=\\"grades c-loan-grade\\">C</span> 15.80%",
+                "label": "<span class=\"grades c-loan-grade\">C</span> 15.80%",
                 "sqlValue": null,
                 "valueIndex": 6
             },
@@ -325,7 +323,7 @@
             {{#if grades.G}}
             {
                 "value": "G",
-                "label": "<span class=\\"grades g-loan-grade\\">G</span> 24.84%",
+                "label": "<span class=\"grades g-loan-grade\">G</span> 24.84%",
                 "sqlValue": null,
                 "valueIndex": 7
             }

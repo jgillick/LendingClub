@@ -40,10 +40,12 @@ class Filters(dict):
         Set the default search filter values
         """
         self['max_per_note'] = 0
-        self['term_36'] = True
-        self['term_60'] = True
+        self['term'] = {
+            'Year3': True,
+            'Year5': True
+        }
         self['exclude_existing'] = True
-        self['min_funding_progress'] = 0
+        self['funding_progress'] = 0
         self['grades'] = {
             'All': True,
             'A': False,
@@ -55,15 +57,42 @@ class Filters(dict):
             'G': False
         }
 
+    def normalize_grades(self):
+        """
+        Adjust the grades list.
+        If a grade has been set, set All to false
+        """
+
+        if self['grades']['All'] is True:
+            for grade in self['grades']:
+                if grade != 'All' and self['grades'][grade] is True:
+                    self['grades']['All'] = False
+                    break
+
+    def normalize_progress(self):
+        """
+        Adjust the funding progress filter to be a factor of 10
+        """
+
+        progress = self['funding_progress']
+        if progress % 10 != 0:
+            progress = round(float(progress) / 10)
+            progress = int(progress) * 10
+
+            self['funding_progress'] = progress
+
     def json_string(self):
         """"
         Returns the JSON string that LendingClub expects for it's search
         """
 
+        self.normalize_grades()
+        self.normalize_progress();
+
         # Get the template
         this_path = os.path.dirname(os.path.realpath(__file__))
         tmpl_file = os.path.join(this_path, 'filter.handlebars')
-        tmpl_source = open(tmpl_file).read()
+        tmpl_source = unicode(open(tmpl_file).read())
 
         # Process template
         compiler = Compiler()
@@ -91,3 +120,7 @@ class Filters(dict):
         out = re.sub('\s*([{\\[\\]}:,])\s*', '\\1', out)
 
         return out
+
+    def __str__(self):
+        return self.json_string()
+
