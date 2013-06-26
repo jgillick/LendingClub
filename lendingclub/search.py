@@ -87,7 +87,7 @@ class Filter(dict):
         """
 
         self.normalize_grades()
-        self.normalize_progress();
+        self.normalize_progress()
 
         # Get the template
         this_path = os.path.dirname(os.path.realpath(__file__))

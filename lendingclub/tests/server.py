@@ -37,12 +37,16 @@ from threading import Thread
 from BaseHTTPServer import BaseHTTPRequestHandler
 
 logging = None
+http_session = {}
+session_disabled = False
 
 
 class TestServerHandler(BaseHTTPRequestHandler):
     httpd = None
     query = None
     data = None
+
+    headers_sent = False
 
     auth = {
         'email': 'test@test.com',
@@ -93,6 +97,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
             self.send_header('x-echo-data', repr(self.data))
 
         self.end_headers()
+        self.headers_sent = True
 
     def read_asset_file(self, file_name):
         """
@@ -106,11 +111,27 @@ class TestServerHandler(BaseHTTPRequestHandler):
 
         return open(asset_file).read()
 
+    def write(self, output):
+        """
+        Write to the response stream and send default headers if they haven't been sent yet
+        """
+        if self.headers_sent is False:
+            self.send_headers()
+        self.wfile.write(output)
+
+    def add_session(self, key, value):
+        """
+        Add a value to the HTTP session
+        """
+        global http_session
+        if not session_disabled:
+            http_session[key] = value
+
     def output_file(self, file_name):
         """
         Read a file from the assets directory and write it to response stream
         """
-        self.wfile.write(self.read_asset_file(file_name))
+        self.write(self.read_asset_file(file_name))
 
     def output_error_json(self, message):
         """
@@ -120,17 +141,11 @@ class TestServerHandler(BaseHTTPRequestHandler):
             'result': 'error',
             'error': [message]
         }
-        self.wfile.write(json.dumps(error))
+        self.write(json.dumps(error))
 
     def process_post_data(self):
-        ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
-        if ctype == 'multipart/form-data':
-            postvars = cgi.parse_multipart(self.rfile, pdict)
-        elif ctype == 'application/x-www-form-urlencoded':
-            length = int(self.headers.getheader('content-length'))
-            postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
-        else:
-            postvars = {}
+        content_len = int(self.headers.getheader('content-length'))
+        postvars = cgi.parse_qs(self.rfile.read(content_len))
 
         # Flatten values
         for key, values in postvars.iteritems():
@@ -156,14 +171,14 @@ class TestServerHandler(BaseHTTPRequestHandler):
         """
         Process at GET request
         """
+        global http_session
         self.process_url()
-        self.send_headers()
 
-        self.log('GET {0} {1}'.format(self.path, self.query))
+        #self.log('GET {0} {1}'.format(self.path, self.query))
 
         # Summary page
         if '/account/summary.action' == self.path:
-            return self.wfile.write('Summary Page')
+            return self.write('Summary Page')
 
         # Cash balance JSON
         elif '/browse/cashBalanceAj.action' == self.path:
@@ -175,30 +190,52 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 if self.query['method'] == 'getLCPortfolios':
                     return self.output_file('portfolioManagement_getLCPortfolios.json')
                 else:
-                    return self.wfile.write('Unknown method {0}'.format(self.query['method']))
+                    return self.write('Unknown method {0}'.format(self.query['method']))
             else:
-                return self.wfile.write('No method provided')
-
-        # Start order
-        elif '/portfolio/recommendPortfolio.action' == self.path:
-            return self.wfile.write('')
+                return self.write('No method provided')
 
         # Place order and strut token
         elif '/portfolio/placeOrder.action' == self.path:
             return self.output_file('placeOrder.html')
 
+        # Select portfolio option and save to session
+        elif '/portfolio/recommendPortfolio.action' == self.path:
+            self.add_session('lending_match_point', self.query['lending_match_point'])
+            self.send_headers(302, {'location': '/portfolio/autoInvest.action'})
+
+        # Clear portfolio building session
+        elif '/portfolio/confirmStartNewPortfolio.action' == self.path:
+            if 'lending_match_point' in http_session:
+                del http_session['lending_match_point']
+            self.send_headers(302, {'location': '/portfolio/viewOrder.action'})
+
+        # Get list of loan fractions (must have lending_match_point set in the session)
+        elif '/data/portfolio' == self.path and 'getPortfolio' == self.query['method'] and 'lending_match_point' in http_session:
+            self.output_file('portfolio_getPortfolio.json')
+
+        # Get a dump of the session
+        elif '/session' == self.path:
+            self.write(json.dumps(http_session))
+
+        # Nothing here yet
+        elif '/portfolio/autoInvest.action' == self.path:
+            self.write('/portfolio/autoInvest.action')
+        elif '/portfolio/viewOrder.action' == self.path:
+            self.write('/portfolio/viewOrder.action')
+
         else:
-            self.wfile.write('Hello')
+            self.write('{"error": "Unknown path"}')
 
     def do_POST(self):
         """
         Process at POST request
         """
-        self.log('POST {0}'.format(self.path))
+        global http_session, session_disabled
+        #self.log('POST {0}'.format(self.path))
         self.process_url()
         self.process_post_data()
 
-        self.log('Post Data {0}'.format(self.data))
+        #self.log('Post Data {0}'.format(self.data))
 
         # Login - if the email and password match, set the cookie
         if '/account/login.action' == self.path:
@@ -210,12 +247,10 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 })
                 return
             else:
-                self.send_headers()
                 return self.output_file('login_fail.html')
 
         # Investment option search
         elif '/portfolio/lendingMatchOptionsV2.action' == self.path:
-            self.send_headers()
 
             # Default filters
             if self.data['filter'] == 'default':
@@ -237,18 +272,53 @@ class TestServerHandler(BaseHTTPRequestHandler):
             elif 'createLCPortfolio' == self.query['method']:
                 return self.output_file('portfolioManagement_createLCPortfolio.json')
             elif 'method' in self.query:
-                return self.wfile.write('Unknown method: {0}'.format(self.query.method))
+                return self.write('Unknown method: {0}'.format(self.query.method))
             else:
-                return self.wfile.write('No method')
+                return self.write('No method')
+
+        # Disable the session
+        elif '/session/disabled' == self.path:
+            session_disabled = True
+            http_session = {}
+            self.write('Session disabled')
+
+        # Enable the session
+        elif '/session/enabled' == self.path:
+            session_disabled = False
+            self.write('Session enabled')
+
+        # Add the post data to the session
+        elif '/session' == self.path:
+            if session_disabled is True:
+                self.write('{"error": "Session disabled"}')
+            else:
+                for key, values in self.data.iteritems():
+                    self.add_session(key, value)
+                self.send_headers(302, {'location': '/session'})
 
         else:
-            self.wfile.write('Hello')
+            self.write('{"error": "Unknown path"}')
 
     def do_HEAD(self):
         """
         Process at HEAD request
         """
         return self.do_GET()
+
+    def do_DELETE(self):
+        """
+        Process at DELETE request
+        """
+        global http_session
+
+        # Delete the session
+        if '/session' == self.path:
+            http_session = {}
+            return self.write(json.dumps(http_session))
+
+        else:
+            self.send_headers(500)
+            self.write('Unknown delete action: {0}'.format(self.path))
 
 
 class ReusableServer(SocketServer.TCPServer):

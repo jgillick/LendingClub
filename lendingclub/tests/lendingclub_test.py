@@ -18,12 +18,15 @@ class TestLendingClub(unittest.TestCase):
 
     def setUp(self):
         self.logger = TestLogger()
-        self.lc = LendingClub(logger=self.logger)
 
+        self.lc = LendingClub(logger=self.logger)
         self.lc.session.base_url = 'http://127.0.0.1:8000/'
         self.lc.session.set_logger(None)
 
         self.lc.authenticate('test@test.com', 'supersecret')
+
+        # Make sure session is enabled
+        self.lc.session.post('/session/enabled')
 
     def tearDown(self):
         pass
@@ -36,6 +39,36 @@ class TestLendingClub(unittest.TestCase):
         portfolios = self.lc.get_portfolio_list()
         self.assertEquals(len(portfolios), 2)
         self.assertEquals(portfolios[0]['portfolioName'], 'Existing Portfolio')
+
+    def test_build_portfolio(self):
+        portfolio = self.lc.build_portfolio(200, 15, 16)
+
+        self.assertNotEqual(portfolio, False)
+        self.assertEqual(portfolio['percentage'], 15.28)
+
+        self.assertTrue('loan_fractions' in portfolio)
+        self.assertEqual(len(portfolio['loan_fractions']), 15)
+
+    def test_build_portfolio_session_fail(self):
+        """ test_build_portfolio_session_fail"
+        If the session isn't saved, fractions shouldn't be found,
+        which should make the entire method return False
+        """
+
+        # Disable session
+        self.lc.session.post('/session/disabled')
+
+        portfolio = self.lc.build_portfolio(200, 15, 16)
+        import json
+        print json.dumps(portfolio)
+        self.assertFalse(portfolio)
+
+    def test_build_portfolio_no_match(self):
+        """ test_build_portfolio_no_match"
+        Enter a min/max percent that cannot match dummy returned JSON
+        """
+        portfolio = self.lc.build_portfolio(200, 17.6, 18.5)
+        self.assertFalse(portfolio)
 
 
 if __name__ == '__main__':

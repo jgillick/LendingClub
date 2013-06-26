@@ -30,6 +30,7 @@ THE SOFTWARE.
 
 import re
 import requests
+import getpass
 import time as time
 from bs4 import BeautifulSoup
 from requests.exceptions import *
@@ -117,6 +118,14 @@ class Session:
         else:
             self.__pass = password
 
+        # Get them from the user
+        if email is None:
+            email = raw_input('Email:')
+            self.email = email
+        if password is None:
+            password = getpass.getpass()
+            self.__pass = password
+
         self.__log('Attempting to authenticate: {0}'.format(self.email))
 
         # Start session
@@ -188,7 +197,7 @@ class Session:
         except Exception:
             return False
 
-    def request(self, method, path, query={}, data={}, redirects=False):
+    def request(self, method, path, query=None, data=None, redirects=False):
         """
         Sends HTTP request to LendingClub.
 
@@ -230,19 +239,19 @@ class Session:
 
         return request
 
-    def post(self, path, query={}, data={}, redirects=False):
+    def post(self, path, query=None, data=None, redirects=False):
         """
         POST request wrapper for request()
         """
         return self.request('POST', path, query, data, redirects)
 
-    def get(self, path, query={}, redirects=False):
+    def get(self, path, query=None, redirects=False):
         """
         GET request wrapper for request()
         """
         return self.request('GET', path, query, None, redirects)
 
-    def head(self, path, query={}, data={}, redirects=False):
+    def head(self, path, query=None, data=None, redirects=False):
         """
         HEAD request wrapper for request()
         """

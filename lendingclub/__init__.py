@@ -118,22 +118,26 @@ class LendingClub:
 
         return folios
 
-    def search(self, filter):
+    def search(self, filters=None):
         """
         Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
+
+        Attributes:
+            filters -- The filters to use to search for notes
         """
+        assert filter is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
 
-        if type(filter) is not Filter
-            raise LendingClubTypeError('filter must be an instance of lendingclub.search.Filter')
-
-        # Get all investment options
-        filters = filter.search_json()
-        if filters is False:
+        # Set filters
+        if filters is None:
             filters = 'default'
+        else:
+            filters = filter.search_string()
         payload = {
             'method': 'search',
-            'filter': '{asdfasdf}'
+            'filter': filters
         }
+
+        # Make request
         response = self.session.post('/browse/browseNotesAj.action', data=payload)
         json_response = response.json()
 
@@ -142,41 +146,107 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, filters, cash):
+    def build_portfolio(self, cash, min_percent=0, max_percent=25, filters=None):
         """
-        Returns a list of new portfolios that match your filters and cash to invest.
-        This is the same as going to https://www.lendingclub.com/portfolio/autoInvest.action
+        Returns a list of loan notes that are diversified by your min/max percent request and filters.
+
+        This is the same as selecting a portfolio from the Invest page (https://www.lendingclub.com/portfolio/autoInvest.action.)
+        except that it will choose an allotment for you. The reason is because LendingClub saves the search and
+        options to the user session. This session could be changed or overridden if the user is browsing
+        the website as they use the API.
+
+        Attributes:
+            cash -- The amount you want to invest in a portfolio
+            min/max_percent -- Matches a portfolio with a average expected APR between these two numbers.
+                               If there are multiple options, the one closes to the max will be chosen.
+            filters -- (optional) The filters to use to search for notes
+
+        Returns a dict representing a new portfolio or False if nothing was found.
         """
-        try:
+        assert filters is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
 
-            # Get all investment options
-            filters = filter.search_json()
-            if filters is False:
-                filters = 'default'
-            payload = {
-                'amount': cash,
-                'max_per_note': filters['max_per_note'],
-                'filter': filters
-            }
-            response = self.session.post('/portfolio/lendingMatchOptionsV2.action', data=payload)
-            resJson = response.json()
+        # Set filters
+        if filters is None:
+            filter_str = 'default'
+            max_per = 25
+        else:
+            filter_str = filter.search_string()
+            max_per = filters['max_per_note']
 
-            if resJson['result'] == 'success' and 'lmOptions' in resJson:
-                return resJson['lmOptions']
-            else:
-                print payload['filter']
-                print response.json()
-                self.logger.error('Could not get investment portfolio options! Server responded with: {0}'.format(response.text))
+        # Start a new portfolio
+        self.session.get('/portfolio/confirmStartNewPortfolio.action')
+
+        # Make request
+        payload = {
+            'amount': cash,
+            'max_per_note': max_per,
+            'filter': filter_str
+        }
+        response = self.session.post('/portfolio/lendingMatchOptionsV2.action', data=payload)
+        json_response = response.json()
+
+        # Options were found
+        if 'result' in json_response and json_response['result'] == 'success' and 'lmOptions' in json_response:
+            options = json_response['lmOptions']
+
+            # Nothing found
+            if type(options) is not list or json_response['numberTicks'] == 0:
                 return False
 
-        except Exception as e:
-            self.logger.error(str(e))
+            # Choose an investment option based on the user's min/max values
+            i = 0
+            match_index = -1
+            match_option = None
+            for option in options:
+                # A perfect match
+                if option['percentage'] == max_percent:
+                    match_option = option
+                    match_index = i
+                    break
+
+                # Over the max
+                elif option['percentage'] > max_percent:
+                    break
+
+                # Higher than the minimum percent and the current matched option
+                elif option['percentage'] >= min_percent and (match_option is None or match_option['percentage'] < option['percentage']):
+                    match_option = option
+                    match_index = i
+
+                i += 1
+
+            # Nothing matched
+            if match_option is None:
+                return False
+
+            # Mark this portfolio for investing (in order to get a list of all notes)
+            payload = {
+                'order_amount': cash,
+                'lending_match_point': match_index,
+                'lending_match_version': 'v2'
+            }
+            self.session.get('/portfolio/recommendPortfolio.action', query=payload)
+
+            # Get all loan fractions
+            frac_response = self.session.get('/data/portfolio', query={'method': 'getPortfolio'})
+            frac_json = frac_response.json()
+            if 'loanFractions' in frac_json and len(frac_json['loanFractions']) > 0:
+                match_option['loan_fractions'] = frac_json['loanFractions']
+            else:
+                return False
+
+            # Reset portfolio search session
+            self.session.get('/portfolio/confirmStartNewPortfolio.action')
+
+            return match_option
+        else:
+            raise LendingClubError('Could not find any diversified investment options', response.text)
 
         return False
 
-    def get_strut_token(self):
+    def __get_strut_token(self):
         """
-        Get the struts token from the place order page
+        Get the struts token from the place order HTML
         """
         strutToken = ''
         try:
@@ -327,13 +397,16 @@ class LendingClub:
 
 
 class LendingClubError(Exception):
+    """
+    An error with the LendingClub API.
+    If the error was the result of an API call, the response attribute
+    will contain the server response text.
+    """
+    response = None
 
-    def __init__(self, value):
+    def __init__(self, value, response=None):
         self.value = value
+        self.response = response
 
     def __str__(self):
         return repr(self.value)
-
-
-class LendingClubTypeError(LendingClubError):
-    pass
