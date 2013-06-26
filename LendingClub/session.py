@@ -27,6 +27,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
+
+import re
 import requests
 import time as time
 from bs4 import BeautifulSoup
@@ -61,7 +63,7 @@ class Session:
         Log a debugging message
         """
         if self.__logger:
-            self.__logger.debug(__logger)
+            self.__logger.debug(message)
 
     def __continue_session(self):
         """
@@ -118,8 +120,8 @@ class Session:
             self.__pass = password
 
         # Start session
-        session = requests.Session()
-        session.headers = {
+        self.__session = requests.Session()
+        self.__session.headers = {
             'Referer': 'https://www.lendingclub.com/',
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31'
         }
@@ -132,7 +134,7 @@ class Session:
             'login_email': email,
             'login_password': password
         }
-        response = self.request('/account/login.action', data=payload, redirects=False)
+        response = self.post('/account/login.action', data=payload, redirects=False)
 
         # Get URL redirect URL and save the last part of the path as the endpoint
         response_url = response.url
@@ -142,8 +144,14 @@ class Session:
 
         # Debugging
         self.__log('Status code: {0}'.format(response.status_code))
-        self.__log('Redirected to: {0}'.format(responseUrl))
+        self.__log('Redirected to: {0}'.format(response_url))
         self.__log('Cookies: {0}'.format(str(response.cookies.keys())))
+
+        # Show query and data that the server received
+        if 'x-echo-query' in response.headers:
+            self.__log('Query: {0}'.format(response.headers['x-echo-query']))
+        if 'x-echo-data' in response.headers:
+            self.__log('Data: {0}'.format(response.headers['x-echo-data']))
 
         # Parse any errors from the HTML
         soup = BeautifulSoup(response.text, "html5lib")
@@ -166,8 +174,6 @@ class Session:
         if endpoint == 'login.action':
             raise AuthenticationError('Unknown! Redirected back to the login page without an error message')
 
-        self.__session = session
-
         return True
 
     def is_site_available(self):
@@ -182,7 +188,7 @@ class Session:
         except Exception:
             return False
 
-    def request(self, method, query={}, data={}, redirects=False):
+    def request(self, method, path, query={}, data={}, redirects=False):
         """
         Sends HTTP request to LendingClub.
 
@@ -205,12 +211,12 @@ class Session:
 
             self.__log('{0} request to: {1}'.format(method, url))
 
-            if method is 'POST':
-                request = session.post(url, params=params, data=data, allow_redirects=redirects)
-            elif method is 'GET':
-                request = session.get(url, params=params, data=data, allow_redirects=redirects)
-            elif method is 'HEAD':
-                request = session.head(url, params=params, data=data, allow_redirects=redirects)
+            if method == 'POST':
+                request = self.__session.post(url, params=query, data=data, allow_redirects=redirects)
+            elif method == 'GET':
+                request = self.__session.get(url, params=query, data=data, allow_redirects=redirects)
+            elif method == 'HEAD':
+                request = self.__session.head(url, params=query, data=data, allow_redirects=redirects)
             else:
                 raise SessionError('{0} is not a supported HTTP method'.format(method))
 
@@ -218,29 +224,29 @@ class Session:
             self.last_request_time = time.time()
 
         except (RequestException, ConnectionError, TooManyRedirects, HTTPError) as e:
-            raise NetworkError('{0} filed to: {1}'.format(method, url), e)
+            raise NetworkError('{0} failed to: {1}'.format(method, url), e)
         except Timeout:
             raise NetworkError('{0} request timed out: {1}'.format(method, url), e)
 
         return request
 
-    def post(self, path, query={}, data={}):
+    def post(self, path, query={}, data={}, redirects=False):
         """
         POST request wrapper for request()
         """
-        return self.request('POST', path, query, data)
+        return self.request('POST', path, query, data, redirects)
 
-    def get(self, path, query={}):
+    def get(self, path, query={}, redirects=False):
         """
         GET request wrapper for request()
         """
-        return self.request('GET', path, query)
+        return self.request('GET', path, query, None, redirects)
 
-    def head(self, path, query={}, data={}):
+    def head(self, path, query={}, data={}, redirects=False):
         """
         HEAD request wrapper for request()
         """
-        return self.request('HEAD', path, query, data)
+        return self.request('HEAD', path, query, None, redirects)
 
 
 class SessionError(Exception):
@@ -256,12 +262,13 @@ class SessionError(Exception):
 
     def __init__(self, value, origin=None):
         self.value = value
+        self.origin = origin
 
     def __str__(self):
-        if origin is None:
+        if self.origin is None:
             return repr(self.value)
         else:
-            return '{0} (from {1})'.format(repr(self.value), repr(origin))
+            return '{0} (from {1})'.format(repr(self.value), repr(self.origin))
 
 
 class AuthenticationError(SessionError):

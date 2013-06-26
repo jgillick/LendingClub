@@ -34,11 +34,15 @@ import urlparse
 import cgi
 import SocketServer
 from threading import Thread
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from BaseHTTPServer import BaseHTTPRequestHandler
+
+logging = None
 
 
 class TestServerHandler(BaseHTTPRequestHandler):
     httpd = None
+    query = None
+    data = None
 
     auth = {
         'email': 'test@test.com',
@@ -49,12 +53,20 @@ class TestServerHandler(BaseHTTPRequestHandler):
     Any other combination will fail on auth.
     """
 
+    def log(self, msg):
+        global logging
+
+        msg = 'SERVER: {0}'.format(msg)
+        if logging is not None:
+            logging.debug(msg)
+        else:
+            print '{0}\n'.format(msg)
 
     def start(self):
         """
         Start the http server
         """
-        print 'Server started...'
+        self.log('Server started...')
         self.httpd.serve_forever()
 
     def stop(self):
@@ -73,6 +85,12 @@ class TestServerHandler(BaseHTTPRequestHandler):
         if type(headers) is dict:
             for key, value in headers.iteritems():
                 self.send_header(key, value)
+
+        # Debug by echoing the query and data base
+        if self.query:
+            self.send_header('x-echo-query', repr(self.query))
+        if self.data:
+            self.send_header('x-echo-data', repr(self.data))
 
         self.end_headers()
 
@@ -141,7 +159,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
         self.process_url()
         self.send_headers()
 
-        print 'GET {0} {1}'.format(self.path, self.query)
+        self.log('GET {0} {1}'.format(self.path, self.query))
 
         # Summary page
         if '/account/summary.action' == self.path:
@@ -179,7 +197,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
         self.process_url()
         self.process_post_data()
 
-        print 'POST {0} {1}'.format(self.path, self.data)
+        self.log('POST {0} {1}'.format(self.path, self.data))
 
         # Login - if the email and password match, set the cookie
         if '/account/login.action' == self.path:
@@ -272,12 +290,15 @@ class ServerThread:
 
     def start(self):
         self.thread.start()
-        print 'Thread started'
+        print 'Server thread started'
 
     def stop(self):
         self.httpd.stop()
 
 
+#
+# When called from the command line
+#
 if __name__ == '__main__':
     server = TestWebServer()
 
