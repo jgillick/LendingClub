@@ -106,8 +106,6 @@ class Session:
         Returns True or throws an exception (NetworkError or AuthenticationError)
         """
 
-        self.__log('Attempting to authenticate')
-
         # Get email and password
         if email is None:
             email = self.email
@@ -118,6 +116,8 @@ class Session:
             password = self.__pass
         else:
             self.__pass = password
+
+        self.__log('Attempting to authenticate: {0}'.format(self.email))
 
         # Start session
         self.__session = requests.Session()

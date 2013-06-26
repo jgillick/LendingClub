@@ -194,10 +194,11 @@ class TestServerHandler(BaseHTTPRequestHandler):
         """
         Process at POST request
         """
+        self.log('POST {0}'.format(self.path))
         self.process_url()
         self.process_post_data()
 
-        self.log('POST {0} {1}'.format(self.path, self.data))
+        self.log('Post Data {0}'.format(self.data))
 
         # Login - if the email and password match, set the cookie
         if '/account/login.action' == self.path:

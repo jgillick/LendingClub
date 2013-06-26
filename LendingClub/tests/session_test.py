@@ -15,7 +15,6 @@ from LendingClub import session
 
 
 class TestSession(unittest.TestCase):
-    http = None
     session = None
     logger = None
 

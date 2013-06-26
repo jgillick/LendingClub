@@ -29,8 +29,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import re
 import os
-import logging
 from bs4 import BeautifulSoup
 from LendingClub.session import Session
 
@@ -40,23 +40,24 @@ class LendingClub:
     session = Session()
 
     def __init__(self, email=None, password=None, logger=None):
-        self.session = Session()
+        self.session = Session(email, password)
 
-        if email is not None:
-            self.authenticate(email, password)
+        if logger is not None:
+            self.set_logger(logger)
 
-        # Create a null logger
-        if logger is None:
-            logger = logging.getLogger('lendingclubapi')
-            logger.setLevel(logging.DEBUG)
-            logHandler = logging.NullHandler()
-            logger.addHandler(logHandler)
-
-        self.set_logger(logger)
+    def __log(self, message):
+        """
+        Log a debugging message
+        """
+        if self.__logger:
+            self.__logger.debug(message)
 
     def set_logger(self, logger):
-        self.logger = logger
-        self.session.set_logger(self.logger)
+        """
+        Set a logger to debug to
+        """
+        self.__logger = logger
+        self.session.set_logger(self.__logger)
 
     def version(self):
         """
@@ -66,16 +67,55 @@ class LendingClub:
         version_file = os.path.join(this_path, 'VERSION')
         return open(version_file).read()
 
-    def authenticate(self, email, password):
+    def authenticate(self, email=None, password=None):
         """
         Attempt to authenticate the user.
-        Returns True or throws an exception
+        Returns True or raises an exception
         """
+        if self.session.authenticate(email, password):
+            return True
+
+    def get_cash_balance(self):
+        """
+        Returns the account cash balance available for investing or False
+        """
+        cash = False
         try:
-            if self.session.authenticate(email, password):
-                return True
+            response = self.session.get('/browse/cashBalanceAj.action')
+            json_response = response.json()
+
+            if json_response['result'] == 'success':
+                self.__log('Cash available: {0}'.format(json_response['cashBalance']))
+                cash_value = json_response['cashBalance']
+
+                # Convert currency to float value
+                # Match values like $1,000.12 or 1,0000$
+                cash_match = re.search('^[^0-9]?([0-9\.,]+)[^0-9]?', cash_value)
+                if cash_match:
+                    cash_str = cash_match.group(1)
+                    cash_str = cash_str.replace(',', '')
+                    cash = float(cash_str)
+            else:
+                self.__log('Could not get cash balance: {0}'.format(response.text))
+
         except Exception as e:
-            raise e
+            self.__log('Could not get the cash balance on the account: Error: {0}\nJSON: {1}'.format(str(e), response.text))
+
+        return cash
+
+    def get_portfolio_list(self):
+        """
+        Return the list of portfolio names from the server
+        """
+        folios = []
+        response = self.session.get('/data/portfolioManagement?method=getLCPortfolios')
+        json_response = response.json()
+
+        # Get portfolios and create a list of names
+        if json_response['result'] == 'success':
+            folios = json_response['results']
+
+        return folios
 
     def browse_notes(self, filter):
         """
@@ -274,55 +314,6 @@ class LendingClub:
             self.logger.error('Could not assign order #{0} to portfolio \'{1}\': {2} -- {3}'.format(orderID, self.settings['portfolio'], str(e), resText))
 
         return False
-
-    def get_cash_balance(self):
-        """
-        Returns the cash balance available to invest or -1 if there was an error
-        """
-        cash = -1
-        try:
-            response = self.session.get('/browse/cashBalanceAj.action')
-            jsonRes = response.json()
-
-            if jsonRes['result'] == 'success':
-                self.logger.debug('Cash available: {0}'.format(jsonRes['cashBalance']))
-                cash_value = jsonRes['cashBalance']
-
-                # Convert currency to float value
-                # Match values like $1,000.12 or 1,0000$
-                cash_match = re.search('^[^0-9]?([0-9\.,]+)[^0-9]?', cash_value)
-                if cash_match:
-                    cash_str = cashMatch.group(1)
-                    cash_str = cashStr.replace(',', '')
-                    cash = float(cashStr)
-            else:
-                self.logger.error('Could not get cash balance: {0}'.format(response.text))
-
-        except Exception as e:
-            self.logger.error('Could not get the cash balance on the account: Error: {0}\nJSON: {1}'.format(str(e), response.text))
-
-        return cash
-
-    def get_portfolio_list(self):
-        """
-        Return the list of portfolio names from the server
-        """
-        foliosNames = []
-        try:
-            response = self.session.get('/data/portfolioManagement?method=getLCPortfolios')
-            jsonRes = response.json()
-
-            # Get portfolios and create a list of names
-            if jsonRes['result'] == 'success':
-                folios = jsonRes['results']
-                for folio in folios:
-                    foliosNames.append(folio['portfolioName'])
-
-        except Exception as e:
-            self.logger.warning('Could not get list of portfolios for this account. Error message: {0}'.format(str(e)))
-
-        return foliosNames
-
 
 
 class LendingClubError(Exception):
