@@ -32,7 +32,8 @@ THE SOFTWARE.
 import re
 import os
 from bs4 import BeautifulSoup
-from LendingClub.session import Session
+from lendingclub.search import Filter
+from lendingclub.session import Session
 
 
 class LendingClub:
@@ -117,30 +118,39 @@ class LendingClub:
 
         return folios
 
-    def browse_notes(self, filter):
+    def search(self, filter):
         """
-        Sends the filters to the Browse Notes API and returns a JSON of the notes found
+        Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
         """
+
+        if type(filter) is not Filter
+            raise LendingClubTypeError('filter must be an instance of lendingclub.search.Filter')
+
         # Get all investment options
-        filters = filter.json_string()
+        filters = filter.search_json()
         if filters is False:
             filters = 'default'
         payload = {
             'method': 'search',
-            'filter': filters
+            'filter': '{asdfasdf}'
         }
         response = self.session.post('/browse/browseNotesAj.action', data=payload)
-        jsonRes = response.json()
-        return jsonRes
+        json_response = response.json()
 
-    def search_for_investment_portfolios(self, filters, cash):
+        if 'result' in json_response and json_response['result'] == 'success':
+            return json_response['searchresult']
+
+        return False
+
+    def build_portfolio(self, filters, cash):
         """
-        Do a search for portfolios of loan notes based on the filters and cash you want to invest.
+        Returns a list of new portfolios that match your filters and cash to invest.
+        This is the same as going to https://www.lendingclub.com/portfolio/autoInvest.action
         """
         try:
 
             # Get all investment options
-            filters = filter.json_string()
+            filters = filter.search_json()
             if filters is False:
                 filters = 'default'
             payload = {
@@ -323,3 +333,7 @@ class LendingClubError(Exception):
 
     def __str__(self):
         return repr(self.value)
+
+
+class LendingClubTypeError(LendingClubError):
+    pass

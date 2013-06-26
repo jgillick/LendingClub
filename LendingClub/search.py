@@ -33,13 +33,13 @@ import re
 from pybars import Compiler
 
 
-class Filters(dict):
+class Filter(dict):
 
     def __init__(self):
         """
         Set the default search filter values
         """
-        self['max_per_note'] = 0
+        self['max_per_note'] = 0    # The most you most you want to invest per note, or 0 for no limit
         self['term'] = {
             'Year3': True,
             'Year5': True
@@ -81,7 +81,7 @@ class Filters(dict):
 
             self['funding_progress'] = progress
 
-    def json_string(self):
+    def search_string(self):
         """"
         Returns the JSON string that LendingClub expects for it's search
         """
@@ -120,7 +120,4 @@ class Filters(dict):
         out = re.sub('\s*([{\\[\\]}:,])\s*', '\\1', out)
 
         return out
-
-    def __str__(self):
-        return self.json_string()
 

@@ -24,7 +24,8 @@ class TestFilters(unittest.TestCase):
         """
         Get the m_values array from the filter JSON for this m_id
         """
-        json = pyjson.loads(str(self.filters))
+        search_json = self.filters.search_string()
+        json = pyjson.loads(search_json)
         for filterObj in json:
             if filterObj['m_id'] == m_id:
                 return filterObj['m_value']
