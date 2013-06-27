@@ -257,6 +257,12 @@ class Session:
         """
         return self.request('HEAD', path, query, None, redirects)
 
+    def clear_session_order(self):
+        """
+        Clears any existing order in the LendingClub.com user session.
+        """
+        self.get('/portfolio/confirmStartNewPortfolio.action')
+
 
 class SessionError(Exception):
     """

@@ -39,9 +39,11 @@ from lendingclub.session import Session
 class LendingClub:
     logger = None
     session = Session()
+    order = None
 
     def __init__(self, email=None, password=None, logger=None):
         self.session = Session(email, password)
+        self.order = Order(self.session)
 
         if logger is not None:
             self.set_logger(logger)
@@ -53,9 +55,17 @@ class LendingClub:
         if self.__logger:
             self.__logger.debug(message)
 
+    def __json_success(self, response):
+        """
+        Check JSON response for a success flag
+        """
+        if type(response) is dict and 'result' in response and response['result'] == 'success':
+            return True
+        return False
+
     def set_logger(self, logger):
         """
-        Set a logger to debug to
+        Set a logger to send debug messages to
         """
         self.__logger = logger
         self.session.set_logger(self.__logger)
@@ -85,7 +95,7 @@ class LendingClub:
             response = self.session.get('/browse/cashBalanceAj.action')
             json_response = response.json()
 
-            if json_response['result'] == 'success':
+            if self.__json_success(json_response):
                 self.__log('Cash available: {0}'.format(json_response['cashBalance']))
                 cash_value = json_response['cashBalance']
 
@@ -113,7 +123,7 @@ class LendingClub:
         json_response = response.json()
 
         # Get portfolios and create a list of names
-        if json_response['result'] == 'success':
+        if self.__json_success(json_response):
             folios = json_response['results']
 
         return folios
@@ -122,7 +132,7 @@ class LendingClub:
         """
         Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
 
-        Attributes:
+        Parameters:
             filters -- The filters to use to search for notes
         """
         assert filter is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
@@ -141,7 +151,7 @@ class LendingClub:
         response = self.session.post('/browse/browseNotesAj.action', data=payload)
         json_response = response.json()
 
-        if 'result' in json_response and json_response['result'] == 'success':
+        if self.__json_success(json_response):
             return json_response['searchresult']
 
         return False
@@ -149,13 +159,10 @@ class LendingClub:
     def build_portfolio(self, cash, min_percent=0, max_percent=25, filters=None):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
+        If you want to invest in these loan notes, you will have to start and order and use add_batch to
+        add all the loan fragments to them.
 
-        This is the same as selecting a portfolio from the Invest page (https://www.lendingclub.com/portfolio/autoInvest.action.)
-        except that it will choose an allotment for you. The reason is because LendingClub saves the search and
-        options to the user session. This session could be changed or overridden if the user is browsing
-        the website as they use the API.
-
-        Attributes:
+        Parameters:
             cash -- The amount you want to invest in a portfolio
             min/max_percent -- Matches a portfolio with a average expected APR between these two numbers.
                                If there are multiple options, the one closes to the max will be chosen.
@@ -173,8 +180,8 @@ class LendingClub:
             filter_str = filter.search_string()
             max_per = filters['max_per_note']
 
-        # Start a new portfolio
-        self.session.get('/portfolio/confirmStartNewPortfolio.action')
+        # Start a new order
+        self.session.clear_session_order()
 
         # Make request
         payload = {
@@ -186,7 +193,7 @@ class LendingClub:
         json_response = response.json()
 
         # Options were found
-        if 'result' in json_response and json_response['result'] == 'success' and 'lmOptions' in json_response:
+        if self.__json_success(json_response) and 'lmOptions' in json_response:
             options = json_response['lmOptions']
 
             # Nothing found
@@ -228,21 +235,119 @@ class LendingClub:
             self.session.get('/portfolio/recommendPortfolio.action', query=payload)
 
             # Get all loan fractions
-            frac_response = self.session.get('/data/portfolio', query={'method': 'getPortfolio'})
-            frac_json = frac_response.json()
-            if 'loanFractions' in frac_json and len(frac_json['loanFractions']) > 0:
-                match_option['loan_fractions'] = frac_json['loanFractions']
+            fractions = self.get_current_order()
+            if len(fractions) > 0:
+                match_option['loan_fractions'] = fractions
             else:
                 return False
 
             # Reset portfolio search session
-            self.session.get('/portfolio/confirmStartNewPortfolio.action')
+            self.session.clear_session_order()
 
             return match_option
         else:
             raise LendingClubError('Could not find any diversified investment options', response.text)
 
         return False
+
+    def start_order(self):
+        """
+        Start a new investment order or loans
+        """
+        order = Order(lc=self)
+        return order
+
+    def get_current_order(self):
+        """
+        Get the list of loan fractions in your current order
+        """
+
+        payload = {
+            'method': 'getPortfolio'
+        }
+        response = self.session.get('/data/portfolio', query=payload)
+        json_response = response.json()
+
+        if self.__json_success(json_response) and 'loanFractions' in json_response:
+            return json_response['loan_fractions']
+
+        return []
+
+    def add_to_order(self, loan_id, amount):
+        """
+        Add or update a loan note to your investment order
+
+        Parameters:
+            loan_id -- The ID of the loan to add to your order
+            amount -- The dollar amount you want to invest in this order (must be a multiple of 25)
+
+        Returns True on success
+        """
+        assert amount > 0 and amount % 25 == 0, 'Amount must be a multiple of 25'
+
+        #
+        # Stage order
+        #
+        payload = {
+            'loan_id': loan_id,
+            'investment_amount': amount,
+            'remove': 'false'
+        }
+        response = self.session.post('/browse/updateLSRAj.action', data=payload)
+        json_response = response.json()
+
+        # Ensure it was successful before moving on
+        if self.__json_success(json_response):
+            return False
+
+        #
+        # Add to order
+        #
+        payload = {
+            'method': 'addToPortfolioNew'
+        }
+        response = self.session.post('/data/portfolio', data=payload)
+        json_response = response.json()
+
+        if self.__json_success(json_response):
+            self.__log(json_response['message'])
+            return True
+        else:
+            return False
+
+    def remove_from_order(self, loan_id):
+        """
+        Remove a loan from your investment order
+
+        Parameters:
+            loan_id -- The ID of the loan to remove from your order
+
+        Returns True on sucess
+        """
+
+        # Find the loan fraction in the current order
+        fractions = self.get_current_order()
+        for frac in fractions:
+
+            if frac['loan_id'] == loan_id:
+
+                # Remove
+                payload = {
+                    'method': 'removeFromPortfolio'
+                    'lfguid': frac['loanFractionGUID'],
+                    'confirm_delete': 'false'
+                }
+                response = self.session.get('/data/portfolio', data=payload)
+                json_response = response.json()
+
+                # Success
+                if self.__json_success(json_response):
+                    return True
+                else:
+                    return False
+
+        return True
+
 
     def __get_strut_token(self):
         """
@@ -394,6 +499,81 @@ class LendingClub:
             self.logger.error('Could not assign order #{0} to portfolio \'{1}\': {2} -- {3}'.format(orderID, self.settings['portfolio'], str(e), resText))
 
         return False
+
+
+class Order:
+    """
+    Manages the loan notes in an investment order
+    """
+
+    loans = {}
+    lc = None
+
+    def __init__(self, lc):
+        """
+        Start a new order
+
+        Parameters:
+            lc -- The LendingClub API object
+        """
+        self.lc = lc
+
+    def add(self, loan_id, amount):
+        """
+        Add a loan and amount you want to invest, to your order.
+        If this loan is already in your order, it's amount will be replaced
+        with the this new amount
+
+        Parameters:
+            loan_id -- The ID of the loan you want to add
+            amount -- The dollar amount you want to invest in this loan.
+        """
+        self.loans[loan_id] = amount
+
+    def update(self, loan_id, amount):
+        """
+        Update a loan in your order with this new amount
+
+        Parameters:
+            loan_id -- The ID of the loan you want to add
+            amount -- The dollar amount you want to invest in this loan.
+        """
+        self.add(loan_id, amount)
+
+    def add_batch(self, loans):
+        """
+        Add a batch of loans to your order. Each loan in the list must be a dictionary
+        object with at least a 'loan_id' and a 'loanFractionAmount' value. The loanFractionAmount
+        value is the dollar amount you wish to invest in this loan.
+
+        Parameters:
+            loans -- A list of dictionary objects representing each loan.
+        """
+
+        # Loans is an object, perhaps it's from build_portfolio and has a loan_fractions list
+        if type(loans) is dict and 'loan_fractions' in loans:
+            loans = loans['loan_fractions']
+
+        assert type(loan) is list, 'The loans property must be a list'
+        for loan in loans:
+            self.add(loan['loan_id'], loan['loanFractionAmount'])
+
+    def remove(self, loan_id):
+        """
+        Remove a loan from your order
+
+        Parameters:
+            loan_id -- The ID of the loan to remove from your order
+        """
+        if loan_id in self.loans:
+            del self.loans[loan_id]
+
+    def execute(self):
+        """
+        Place the order with LendingClub
+        """
+        pass
+
 
 
 class LendingClubError(Exception):
