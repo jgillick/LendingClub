@@ -276,23 +276,6 @@ class LendingClub:
         order = Order(lc=self)
         return order
 
-    def get_current_order(self):
-        """
-        Get the list of loan fractions in your current order
-        """
-
-        payload = {
-            'method': 'getPortfolio'
-        }
-        response = self.session.get('/data/portfolio', query=payload)
-        json_response = response.json()
-
-        if self.__json_success(json_response) and 'loanFractions' in json_response:
-            return json_response['loan_fractions']
-
-        return []
-
-
     def __get_strut_token(self):
         """
         Get the struts token from the place order HTML
