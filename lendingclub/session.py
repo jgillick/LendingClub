@@ -42,6 +42,8 @@ class Session:
     __pass = None
     __logger = None
 
+    last_response = None
+
     session_timeout = 10
     """ Minutes until the session expires.
     The session will attempt to reauth before the next HTTP call after timeout."""
@@ -228,6 +230,8 @@ class Session:
                 request = self.__session.head(url, params=query, data=data, allow_redirects=redirects)
             else:
                 raise SessionError('{0} is not a supported HTTP method'.format(method))
+
+            self.last_response = request
 
             # Update session time
             self.last_request_time = time.time()

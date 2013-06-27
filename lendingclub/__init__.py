@@ -265,7 +265,7 @@ class LendingClub:
 
             return match_option
         else:
-            raise LendingClubError('Could not find any diversified investment options', response.text)
+            raise LendingClubError('Could not find any diversified investment options', response)
 
         return False
 
@@ -276,157 +276,6 @@ class LendingClub:
         order = Order(lc=self)
         return order
 
-    def __get_strut_token(self):
-        """
-        Get the struts token from the place order HTML
-        """
-        strutToken = ''
-        try:
-            response = self.session.get('/portfolio/placeOrder.action')
-            soup = BeautifulSoup(response.text, "html5lib")
-            strutTokenTag = soup.find('input', {'name': 'struts.token'})
-            if strutTokenTag:
-                strutToken = strutTokenTag['value']
-        except Exception as e:
-            self.logger.warning('Could not get struts token. Error message: {0}'.filter(str(e)))
-
-        return strutToken
-
-    def prepare_investment_order(self, cash, investmentOption):
-        """
-        Submit an investment request for with an investment portfolio option selected from get_investment_option()
-        """
-
-        # Place the order
-        try:
-            if 'optIndex' not in investmentOption:
-                self.logger.error('The \'optIndex\' key is not present in investmentOption passed to sendInvestment()! This value is set when selecting the option from get_investment_option()')
-                return False
-
-            # Prepare the order (don't process response)
-            payload = {
-                'order_amount': cash,
-                'lending_match_point': investmentOption['optIndex'],
-                'lending_match_version': 'v2'
-            }
-            self.session.get('/portfolio/recommendPortfolio.action', query=payload)
-
-            # Get struts token
-            return self.get_strut_token()
-
-        except Exception as e:
-            self.logger.error('Could not complete your order (although, it might have gone through): {0}'.format(str(e)))
-
-        return False
-
-    def place_order(self, strutToken, cash, investmentOption):
-        """
-        Place the order and get the order number, loan ID from the resulting HTML -- then assign to a portfolio
-        The cash parameter is the amount of money invest in this order
-        The investmentOption parameter is the investment portfolio returned by get_investment_option()
-        """
-
-        orderID = 0
-        loanIDs = []
-
-        # Process order confirmation page
-        try:
-            payload = {}
-            if strutToken:
-                payload['struts.token.name'] = 'struts.token'
-                payload['struts.token'] = strutToken
-            response = self.session.post('/portfolio/orderConfirmed.action', data=payload)
-
-            # Process HTML
-            html = response.text
-            soup = BeautifulSoup(html)
-
-            # Order num
-            orderField = soup.find(id='order_id')
-            if orderField:
-                orderID = int(orderField['value'])
-
-            # Load ID
-            loanTags = soup.find_all('td', {'class': 'loan_id'})
-            for tag in loanTags:
-                loanIDs.append(int(tag.text))
-
-            # Print status message
-            if orderID == 0:
-                self.logger.error('An investment order was submitted, but a confirmation could not be determined')
-            else:
-                self.logger.info('Order #{0} was successfully submitted for ${1} at {2}%'.format(orderID, cash, investmentOption['percentage']))
-
-            # Print order summary
-            orderSummary = self.get_option_summary(investmentOption)
-            self.logger.info(orderSummary)
-
-        except Exception as e:
-            self.logger.error('Could not get your order number or loan ID from the order confirmation. Err Message: {0}'.format(str(e)))
-
-        return (orderID, loanIDs)
-
-    def assign_to_portfolio(self, orderID=0, loanIDs=[], returnJson=False):
-        """
-        Assign an order to a the portfolio named in the investing dictionary.
-        If returnJson is True, this method will return the JSON returned from the server (this is primarily for unit testing)
-        Otherwise it returns the name of the portfolio the order was assigned to or False
-        """
-
-        # Assign to portfolio
-        resText = ''
-        try:
-            if not self.settings['portfolio']:
-                return True
-
-            if len(loanIDs) != 0 and orderID != 0:
-
-                # Data
-                orderIDs = [orderID]*len(loanIDs)  # 1 order ID per record
-                postData = {
-                    'loan_id': loanIDs,
-                    'record_id': loanIDs,
-                    'order_id': orderIDs
-                }
-                paramData = {
-                    'method': 'addToLCPortfolio',
-                    'lcportfolio_name': self.settings['portfolio']
-                }
-
-                # New portfolio
-                folioList = self.get_portfolio_list()
-                if self.settings['portfolio'] not in folioList:
-                    paramData['method'] = 'createLCPortfolio'
-
-                # Send
-                response = self.session.post('/data/portfolioManagement', query=paramData, data=postData)
-                resText = response.text
-                resJson = response.json()
-
-                if returnJson is True:
-                    return resJson
-
-                # Failed if the response is not 200 or JSON result is not success
-                if response.status_code != 200 or resJson['result'] != 'success':
-                    self.logger.error('Could not assign order #{0} to portfolio \'{1}: Server responded with {2}\''.format(str(orderID), self.settings['portfolio'], response.text))
-
-                # Success
-                else:
-
-                    # Assigned to another portfolio, for some reason, raise warning
-                    if 'portfolioName' in resJson and resJson['portfolioName'] != self.settings['portfolio']:
-                        self.logger.warning('Added order #{0} to portfolio "{1}" - NOT - "{2}", and I don\'t know why'.format(str(orderID), resJson['portfolioName'], self.settings['portfolio']))
-                    # Assigned to the correct portfolio
-                    else:
-                        self.logger.info('Added order #{0} to portfolio "{1}"'.format(str(orderID), self.settings['portfolio']))
-
-                    return resJson['portfolioName']
-
-        except Exception as e:
-            self.logger.error('Could not assign order #{0} to portfolio \'{1}\': {2} -- {3}'.format(orderID, self.settings['portfolio'], str(e), resText))
-
-        return False
-
 
 class Order:
     """
@@ -434,6 +283,7 @@ class Order:
     """
 
     loans = {}
+    order_id = 0
     lc = None
 
     def __init__(self, lc):
@@ -455,6 +305,7 @@ class Order:
             loan_id -- The ID of the loan you want to add
             amount -- The dollar amount you want to invest in this loan.
         """
+        assert amount % 25 == 0, 'Amount must be a multiple of 25'
         self.loans[loan_id] = amount
 
     def update(self, loan_id, amount):
@@ -481,7 +332,8 @@ class Order:
         if type(loans) is dict and 'loan_fractions' in loans:
             loans = loans['loan_fractions']
 
-        assert type(loan) is list, 'The loans property must be a list'
+        # Add each loan
+        assert type(loans) is list, 'The loans property must be a list'
         for loan in loans:
             self.add(loan['loan_id'], loan['loanFractionAmount'])
 
@@ -495,18 +347,202 @@ class Order:
         if loan_id in self.loans:
             del self.loans[loan_id]
 
-    def execute(self):
+    def execute(self, portfolio=None):
         """
         Place the order with LendingClub
+
+        Parameters:
+            portfolio -- The name of the portfolio to add the invested loan notes to.
+                         This can be a new or existing portfolio name.
+
+        Returns the order ID
         """
-        pass
+        assert self.order_id == 0, 'This order has already been place. Start a new order.'
+
+        # Place the order
+        self.__stage_order()
+        token = self.__get_strut_token()
+        self.order_id = self.__place_order(token)
+
+        self.lc.__log('Order #{0} was successfully submitted'.format(self.order_id))
+
+        # Assign to portfolio
+        if portfolio is not None:
+            self.__assign_to_portfolio()
+
+        return self.order_id
+
+    def __stage_order(self):
+        """
+        Add all the loans to the LC order session
+        """
+
+        # Create a fresh order session
+        self.lc.session.clear_session_order()
+
+        #
+        # Stage all the loans to the order
+        #
+        for loan_id, amount in self.loans.iteritems():
+            payload = {
+                'loan_id': loan_id,
+                'investment_amount': amount,
+                'remove': 'false'
+            }
+            response = self.session.post('/browse/updateLSRAj.action', data=payload)
+            json_response = response.json()
+
+            # Ensure it was successful before moving on
+            if self.lc.__json_success(json_response):
+                raise LendingClubError('Could not stage loan {0} on the order', response)
+
+        #
+        # Add all staged loans to the order
+        #
+        payload = {
+            'method': 'addToPortfolioNew'
+        }
+        response = self.lc.session.post('/data/portfolio', data=payload)
+        json_response = response.json()
+
+        if self.lc.__json_success(json_response):
+            self.lc.__log(json_response['message'])
+            return True
+        else:
+            raise self.lc.__log('Could not add loans to the order: {0}'.format(response.text))
+            raise LendingClubError('Could not add loans to the order', response.text)
+
+    def __get_strut_token(self):
+        """
+        Move the staged loan notes to the order stage and get the struts token.
+        The order will not be placed until calling _confirm_order()
+        """
+
+        try:
+            # Move to the place order page and get the struts token
+            response = self.lc.session.get('/portfolio/placeOrder.action')
+            soup = BeautifulSoup(response.text, "html5lib")
+
+            strut_tag = soup.find('input', {'name': 'struts.token'})
+            if strut_tag:
+                return strut_tag['value']
+            else:
+                self.lc.__log('No struts token! {0}', response.text)
+                raise LendingClubError('Could not find the struts token to place order with', response)
+
+        except Exception as e:
+            self.lc.__log('Could not get struts token. Error message: {0}'.filter(str(e)))
+            raise LendingClubError('Could not get struts token. Error message: {0}'.filter(str(e)))
+
+    def __place_order(self, token):
+        """
+        Use the struts token to place the order.
+
+        Parameters:
+            token -- The struts token received from the place order page
+
+        Returns the order ID.
+        """
+        order_id = 0
+        response = None
+
+        # Process order confirmation page
+        try:
+            # Place the order
+            payload = {}
+            if token:
+                payload['struts.token.name'] = 'struts.token'
+                payload['struts.token'] = token
+            response = self.lc.session.post('/portfolio/orderConfirmed.action', data=payload)
+
+            # Process HTML for the order ID
+            html = response.text
+            soup = BeautifulSoup(html)
+
+            # Order num
+            order_field = soup.find(id='order_id')
+            if order_field:
+                order_id = int(order_field['value'])
+
+            # Did not find an ID
+            if order_id == 0:
+                self.lc.__log('An investment order was submitted, but a confirmation ID could not be determined')
+                raise LendingClubError('No order ID was found when placing the order.', response)
+            else:
+                return order_id
+
+        except Exception as e:
+            raise LendingClubError('Could not place the order: {0}'.format(str(e)), response)
+
+    def __assign_to_portfolio(self, portfolio):
+        """
+        Assign the order to a named portfolio, either new or existing.
+
+        Parameters:
+            portfolio -- The name of the portfolio to assign the order to
+
+        Returns True
+        """
+        assert self.order_id > 0, 'The order has not been processed yet'
+
+        # Assign to portfolio
+        try:
+
+            # Get loan IDs as a list
+            loan_ids = []
+            for loan_id, amount in self.loans.iteritems():
+                loan_ids.append(loan_id)
+
+            # Data
+            order_ids = [self.order_id]*len(loan_ids)  # Make a list of 1 order ID per loan
+            post = {
+                'loan_id': loan_ids,
+                'record_id': loan_ids,
+                'order_id': order_ids
+            }
+            query = {
+                'method': 'createLCPortfolio',
+                'lcportfolio_name': portfolio
+            }
+
+            # Is it an existing portfolio
+            existing = self.lc.get_portfolio_list()
+            for folio in existing:
+                if folio['portfolioName'] == portfolio:
+                    query['method'] = 'addToLCPortfolio'
+
+            # Send
+            response = self.lc.session.post('/data/portfolioManagement', query=post, data=query)
+            json_response = response.json()
+
+            # Failed
+            if not self.lc.__json_success(response):
+                raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\''.format(str(self.order_id), portfolio), response)
+
+            # Success
+            else:
+
+                # Assigned to another portfolio, for some reason, raise warning
+                if 'portfolioName' in json_response and json_response['portfolioName'] != self.settings['portfolio']:
+                    raise LendingClubError('Added order #{0} to portfolio "{1}" - NOT - "{2}", and I don\'t know why'.format(str(self.order_id), json_response['portfolioName'], portfolio))
+
+                # Assigned to the correct portfolio
+                else:
+                    self.lc.__log('Added order #{0} to portfolio "{1}"'.format(str(self.order_id), portfolio))
+
+                return True
+
+        except Exception as e:
+            raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\': {2}'.format(self.order_id, portfolio, str(e)), response)
+
+        return False
 
 
 class LendingClubError(Exception):
     """
     An error with the LendingClub API.
     If the error was the result of an API call, the response attribute
-    will contain the server response text.
+    will contain the HTTP requests response object that was used to make the call to LendingClub.
     """
     response = None
 
