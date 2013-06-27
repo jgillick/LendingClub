@@ -128,12 +128,14 @@ class LendingClub:
 
         return folios
 
-    def search(self, filters=None):
+    def search(self, filters=None, start_index=0):
         """
         Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
 
         Parameters:
             filters -- The filters to use to search for notes
+            start_index -- Only 100 records will be returned at a time, so use this to start at a later index.
+                            For example, to get the next 100, set start_index to 100
         """
         assert filter is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
 
@@ -144,7 +146,9 @@ class LendingClub:
             filters = filter.search_string()
         payload = {
             'method': 'search',
-            'filter': filters
+            'filter': filters,
+            'startindex': start_index,
+            'pagesize': 100
         }
 
         # Make request
@@ -152,7 +156,13 @@ class LendingClub:
         json_response = response.json()
 
         if self.__json_success(json_response):
-            return json_response['searchresult']
+            results = json_response['searchresult']
+
+            # Normalize results by converting loanGUID -> loan_id
+            for loan in results['loans'].iteritems():
+                loan['loan_id'] = loan['loanGUID']
+
+            return results
 
         return False
 
@@ -235,7 +245,16 @@ class LendingClub:
             self.session.get('/portfolio/recommendPortfolio.action', query=payload)
 
             # Get all loan fractions
-            fractions = self.get_current_order()
+            payload = {
+                'method': 'getPortfolio'
+            }
+            response = self.session.get('/data/portfolio', query=payload)
+            json_response = response.json()
+
+            fractions = []
+            if self.__json_success(json_response) and 'loanFractions' in json_response:
+                fractions = json_response['loan_fractions']
+
             if len(fractions) > 0:
                 match_option['loan_fractions'] = fractions
             else:
@@ -272,81 +291,6 @@ class LendingClub:
             return json_response['loan_fractions']
 
         return []
-
-    def add_to_order(self, loan_id, amount):
-        """
-        Add or update a loan note to your investment order
-
-        Parameters:
-            loan_id -- The ID of the loan to add to your order
-            amount -- The dollar amount you want to invest in this order (must be a multiple of 25)
-
-        Returns True on success
-        """
-        assert amount > 0 and amount % 25 == 0, 'Amount must be a multiple of 25'
-
-        #
-        # Stage order
-        #
-        payload = {
-            'loan_id': loan_id,
-            'investment_amount': amount,
-            'remove': 'false'
-        }
-        response = self.session.post('/browse/updateLSRAj.action', data=payload)
-        json_response = response.json()
-
-        # Ensure it was successful before moving on
-        if self.__json_success(json_response):
-            return False
-
-        #
-        # Add to order
-        #
-        payload = {
-            'method': 'addToPortfolioNew'
-        }
-        response = self.session.post('/data/portfolio', data=payload)
-        json_response = response.json()
-
-        if self.__json_success(json_response):
-            self.__log(json_response['message'])
-            return True
-        else:
-            return False
-
-    def remove_from_order(self, loan_id):
-        """
-        Remove a loan from your investment order
-
-        Parameters:
-            loan_id -- The ID of the loan to remove from your order
-
-        Returns True on sucess
-        """
-
-        # Find the loan fraction in the current order
-        fractions = self.get_current_order()
-        for frac in fractions:
-
-            if frac['loan_id'] == loan_id:
-
-                # Remove
-                payload = {
-                    'method': 'removeFromPortfolio'
-                    'lfguid': frac['loanFractionGUID'],
-                    'confirm_delete': 'false'
-                }
-                response = self.session.get('/data/portfolio', data=payload)
-                json_response = response.json()
-
-                # Success
-                if self.__json_success(json_response):
-                    return True
-                else:
-                    return False
-
-        return True
 
 
     def __get_strut_token(self):
@@ -573,7 +517,6 @@ class Order:
         Place the order with LendingClub
         """
         pass
-
 
 
 class LendingClubError(Exception):
