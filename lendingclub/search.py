@@ -57,7 +57,7 @@ class Filter(dict):
             'G': False
         }
 
-    def normalize_grades(self):
+    def __normalize_grades(self):
         """
         Adjust the grades list.
         If a grade has been set, set All to false
@@ -69,7 +69,7 @@ class Filter(dict):
                     self['grades']['All'] = False
                     break
 
-    def normalize_progress(self):
+    def __normalize_progress(self):
         """
         Adjust the funding progress filter to be a factor of 10
         """
@@ -81,13 +81,70 @@ class Filter(dict):
 
             self['funding_progress'] = progress
 
+    def validate(self, results):
+        """
+        Validate that the results indeed match the filters.
+        It's a VERY good idea to run your search results through this, even though
+        the filters were passed to LendingClub in your search. Since we're not using formal
+        APIs for LendingClub, they could change the way their search works at anytime, which
+        might break the filters.
+
+        Parameters:
+            results -- A list of loan note records returned from LendingClub
+        """
+        for loan in results:
+            self.validate_one(loan)
+
+    def validate_one(self, loan):
+        """
+        Validate a single result record to the filters
+
+        Parameters:
+            loan -- A single loan note record returned from LendingClub
+        """
+        assert type(loan) is dict, 'loan parameter must be a dictionary object'
+
+        # Check required keys for a loan
+        req = {
+            'loanGrade': 'grade',
+            'loanLength': 'term',
+            'loanUnfundedAmount': 'progress',
+            'loanAmountRequested': 'progress',
+            'alreadyInvestedIn': 'exclude_existing'
+        }
+        for key, criteria in req.iteritems():
+            if key not in loan:
+                raise FilterValidationError('Loan does not have a "{0}" value.'.format(key), loan, criteria)
+
+        # Grade
+        grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
+        if grade not in self.grades:
+            raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
+        elif self.grades[grade] is False:
+            raise FilterValidationError(loan=loan, criteria='grade')
+
+        # Term
+        if loan['loanLength'] == 36 and self['term']['Year3'] is False:
+            raise FilterValidationError(loan=loan, criteria='term')
+        elif loan['loanLength'] == 60 and self['term']['Year5'] is False:
+            raise FilterValidationError(loan=loan, criteria='term')
+
+        # Progress
+        loan_progress = (1 - (loan['loanUnfundedAmount'] / loan['loanAmountRequested'])) * 100
+        if self['funding_progress'] > loan_progress:
+            raise FilterValidationError(loan=loan, criteria='funding_progress')
+
+        # Exclude existing
+        if self['exclude_existing'] is True and loan['alreadyInvestedIn'] is True:
+            raise FilterValidationError(loan=loan, criteria='alreadyInvestedIn')
+
     def search_string(self):
         """"
         Returns the JSON string that LendingClub expects for it's search
         """
 
-        self.normalize_grades()
-        self.normalize_progress()
+        self.__normalize_grades()
+        self.__normalize_progress()
 
         # Get the template
         this_path = os.path.dirname(os.path.realpath(__file__))
@@ -121,3 +178,31 @@ class Filter(dict):
 
         return out
 
+
+class FilterValidationError(Exception):
+    """
+    A loan note does not match the filters set.
+
+    Attributes:
+        value -- The error message
+        loan -- The loan note that did not match
+        criteria -- The filter that did not match.
+    """
+    value = None
+    loan = None
+    criteria = None
+
+    def __init__(self, value=None, loan=None, criteria=None):
+        self.loan = loan
+        self.criteria = criteria
+
+        if value is None:
+            if criteria is None:
+                self.value = 'Did not meet filter criteria'
+            else:
+                self.value = 'Did not meet filter criteria for {0}'.format(criteria)
+        else:
+            self.value = value
+
+    def __str__(self):
+        return repr(self.value)
