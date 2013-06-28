@@ -245,9 +245,14 @@ class LendingClub:
             response = self.session.get('/data/portfolio', query=payload)
             json_response = response.json()
 
+            # Extract fractions from response
             fractions = []
             if 'loanFractions' in json_response:
                 fractions = json_response['loanFractions']
+
+                # Normalize by converting loanFractionAmount to invest_amount
+                for frac in fractions:
+                    frac['invest_amount'] = frac['loanFractionAmount']
 
             if len(fractions) > 0:
                 match_option['loan_fractions'] = fractions
@@ -317,15 +322,18 @@ class Order:
         """
         self.add(loan_id, amount)
 
-    def add_batch(self, loans):
+    def add_batch(self, loans, batch_amount=None):
         """
         Add a batch of loans to your order. Each loan in the list must be a dictionary
-        object with at least a 'loan_id' and a 'loanFractionAmount' value. The loanFractionAmount
+        object with at least a 'loan_id' and a 'invest_amount' value. The invest_amount
         value is the dollar amount you wish to invest in this loan.
 
         Parameters:
-            loans -- A list of dictionary objects representing each loan.
+            loans -- A list of dictionary objects representing each loan and the amount you want to invest in it.
+            batch_amount -- The dollar amount you want to set on ALL loans in this batch.
+                            NOTE: This will override the invest_amount value for each loan.
         """
+        assert batch_amount is None or batch_amount % 25 == 0, 'batch_amount must be a multiple of 25'
 
         # Loans is an object, perhaps it's from build_portfolio and has a loan_fractions list
         if type(loans) is dict and 'loan_fractions' in loans:
@@ -334,7 +342,10 @@ class Order:
         # Add each loan
         assert type(loans) is list, 'The loans property must be a list'
         for loan in loans:
-            self.add(loan['loan_id'], loan['loanFractionAmount'])
+            amount = batch_amount if batch_amount else loan['invest_amount']
+
+            assert amount % 25 == 0, 'Loan invest_amount must be a multiple of 25'
+            self.add(loan['loan_id'], amount)
 
     def remove(self, loan_id):
         """

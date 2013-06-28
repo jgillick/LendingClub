@@ -76,16 +76,34 @@ class TestLendingClub(unittest.TestCase):
         self.order.add_batch([
             {
                 'loan_id': 123,
-                'loanFractionAmount': 50
+                'invest_amount': 50
             }, {
                 'loan_id': 234,
-                'loanFractionAmount': 75
+                'invest_amount': 75
             }
         ])
 
         self.assertEqual(len(self.order.loans), 2)
         self.assertEqual(self.order.loans[123], 50)
         self.assertEqual(self.order.loans[234], 75)
+
+    def test_add_batch_amount(self):
+        """ test_add_batch_amount
+        Add a batch with a batch_amount parameter value to override the individual values
+        """
+        self.order.add_batch([
+            {
+                'loan_id': 123,
+                'invest_amount': 50
+            }, {
+                'loan_id': 234,
+                'invest_amount': 75
+            }
+        ], 100)
+
+        self.assertEqual(len(self.order.loans), 2)
+        self.assertEqual(self.order.loans[123], 100)
+        self.assertEqual(self.order.loans[234], 100)
 
     def test_add_batch_object(self):
         """ test_add_batch_object
@@ -95,10 +113,10 @@ class TestLendingClub(unittest.TestCase):
             'loan_fractions': [
                 {
                     'loan_id': 123,
-                    'loanFractionAmount': 50
+                    'invest_amount': 50
                 }, {
                     'loan_id': 234,
-                    'loanFractionAmount': 75
+                    'invest_amount': 75
                 }
             ]
         })
@@ -111,10 +129,10 @@ class TestLendingClub(unittest.TestCase):
         self.order.add_batch([
             {
                 'loan_id': 123,
-                'loanFractionAmount': 50
+                'invest_amount': 50
             }, {
                 'loan_id': 234,
-                'loanFractionAmount': 75
+                'invest_amount': 75
             }
         ])
 
@@ -125,10 +143,10 @@ class TestLendingClub(unittest.TestCase):
         self.order.add_batch([
             {
                 'loan_id': 123,
-                'loanFractionAmount': 50
+                'invest_amount': 50
             }, {
                 'loan_id': 234,
-                'loanFractionAmount': 75
+                'invest_amount': 75
             }
         ])
 
@@ -145,10 +163,10 @@ class TestLendingClub(unittest.TestCase):
         self.order.add_batch([
             {
                 'loan_id': 123,
-                'loanFractionAmount': 50
+                'invest_amount': 50
             }, {
                 'loan_id': 234,
-                'loanFractionAmount': 75
+                'invest_amount': 75
             }
         ])
 
@@ -168,10 +186,10 @@ class TestLendingClub(unittest.TestCase):
         self.order.add_batch([
             {
                 'loan_id': 123,
-                'loanFractionAmount': 50
+                'invest_amount': 50
             }, {
                 'loan_id': 234,
-                'loanFractionAmount': 75
+                'invest_amount': 75
             }
         ])
 

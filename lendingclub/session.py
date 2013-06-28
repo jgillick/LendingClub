@@ -271,7 +271,7 @@ class Session:
 
     def json_success(self, json):
         """
-        Check JSON response object for a success flag
+        Check a JSON response object for the success flag
 
         Parameters:
             json -- A JSON response dictionary from LendingClub
