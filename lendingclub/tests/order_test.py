@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import sys
 import unittest
 from logger import TestLogger
@@ -105,6 +106,82 @@ class TestLendingClub(unittest.TestCase):
         self.assertEqual(len(self.order.loans), 2)
         self.assertEqual(self.order.loans[123], 50)
         self.assertEqual(self.order.loans[234], 75)
+
+    def test_execute(self):
+        self.order.add_batch([
+            {
+                'loan_id': 123,
+                'loanFractionAmount': 50
+            }, {
+                'loan_id': 234,
+                'loanFractionAmount': 75
+            }
+        ])
+
+        order_id = self.order.execute()
+        self.assertNotEqual(order_id, 0)
+
+    def test_execute_existing_portfolio(self):
+        self.order.add_batch([
+            {
+                'loan_id': 123,
+                'loanFractionAmount': 50
+            }, {
+                'loan_id': 234,
+                'loanFractionAmount': 75
+            }
+        ])
+
+        portfolio = 'New Portfolio'
+        order_id = self.order.execute(portfolio)
+        self.assertNotEqual(order_id, 0)
+
+        # Check portfolio name
+        request = self.lc.session.get('/session')
+        http_session = request.json()
+        self.assertEqual(http_session['new_portfolio'], portfolio)
+
+    def test_execute_new_portfolio(self):
+        self.order.add_batch([
+            {
+                'loan_id': 123,
+                'loanFractionAmount': 50
+            }, {
+                'loan_id': 234,
+                'loanFractionAmount': 75
+            }
+        ])
+
+        portfolio = 'Existing Portfolio'
+        order_id = self.order.execute(portfolio)
+        self.assertNotEqual(order_id, 0)
+
+        # Check portfolio name
+        request = self.lc.session.get('/session')
+        http_session = request.json()
+        self.assertEqual(http_session['existing_portfolio'], portfolio)
+
+    def test_double_execute(self):
+        """ test_double_execute
+        An order can only be executed once
+        """
+        self.order.add_batch([
+            {
+                'loan_id': 123,
+                'loanFractionAmount': 50
+            }, {
+                'loan_id': 234,
+                'loanFractionAmount': 75
+            }
+        ])
+
+        order_id = self.order.execute()
+        self.assertNotEqual(order_id, 0)
+
+        self.assertRaises(
+            AssertionError,
+            lambda: self.order.execute()
+        )
 
 
 if __name__ == '__main__':

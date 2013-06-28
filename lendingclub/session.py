@@ -269,6 +269,17 @@ class Session:
         """
         self.get('/portfolio/confirmStartNewPortfolio.action')
 
+    def json_success(self, json):
+        """
+        Check JSON response object for a success flag
+
+        Parameters:
+            json -- A JSON response dictionary from LendingClub
+        """
+        if type(json) is dict and 'result' in json and json['result'] == 'success':
+            return True
+        return False
+
 
 class SessionError(Exception):
     """

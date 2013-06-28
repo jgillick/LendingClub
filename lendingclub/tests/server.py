@@ -176,57 +176,64 @@ class TestServerHandler(BaseHTTPRequestHandler):
         global http_session
         self.process_url()
 
-        #self.log('GET {0} {1}'.format(self.path, self.query))
+        path = self.path
+        query = self.query
+
+        #self.log('GET {0} {1}'.format(path, query))
 
         # Summary page
-        if '/account/summary.action' == self.path:
+        if '/account/summary.action' == path:
             return self.write('Summary Page')
 
         # Cash balance JSON
-        elif '/browse/cashBalanceAj.action' == self.path:
+        elif '/browse/cashBalanceAj.action' == path:
             return self.output_file('cashBalanceAj.json')
 
         # Portfolio list
-        elif '/data/portfolioManagement' == self.path:
-            if 'method' in self.query:
-                if self.query['method'] == 'getLCPortfolios':
+        elif '/data/portfolioManagement' == path:
+            if 'method' in query:
+                if query['method'] == 'getLCPortfolios':
                     return self.output_file('portfolioManagement_getLCPortfolios.json')
                 else:
-                    return self.write('Unknown method {0}'.format(self.query['method']))
+                    return self.write('Unknown method {0}'.format(query['method']))
             else:
                 return self.write('No method provided')
 
         # Place order and strut token
-        elif '/portfolio/placeOrder.action' == self.path:
+        elif '/portfolio/placeOrder.action' == path:
             return self.output_file('placeOrder.html')
 
         # Select portfolio option and save to session
-        elif '/portfolio/recommendPortfolio.action' == self.path:
-            self.add_session('lending_match_point', self.query['lending_match_point'])
+        elif '/portfolio/recommendPortfolio.action' == path:
+            self.add_session('lending_match_point', query['lending_match_point'])
             self.send_headers(302, {'location': '/portfolio/autoInvest.action'})
 
         # Clear portfolio building session
-        elif '/portfolio/confirmStartNewPortfolio.action' == self.path:
+        elif '/portfolio/confirmStartNewPortfolio.action' == path:
             if 'lending_match_point' in http_session:
                 del http_session['lending_match_point']
             self.send_headers(302, {'location': '/portfolio/viewOrder.action'})
 
         # Get list of loan fractions (must have lending_match_point set in the session)
-        elif '/data/portfolio' == self.path and 'getPortfolio' == self.query['method']:
+        elif '/data/portfolio' == path and 'getPortfolio' == query['method']:
             if 'lending_match_point' in http_session:
                 self.output_file('portfolio_getPortfolio.json')
             else:
                 print 'lending_match_point was not set'
                 self.write('{"error": "The lending match point was not set"}')
 
+        # Stage an order
+        elif '/data/portfolio' == path and 'addToPortfolioNew' == query['method']:
+            return self.output_file('portfolio_addToPortfolioNew.json')
+
         # Get a dump of the session
-        elif '/session' == self.path:
+        elif '/session' == path:
             self.write(json.dumps(http_session))
 
         # Nothing here yet
-        elif '/portfolio/autoInvest.action' == self.path:
+        elif '/portfolio/autoInvest.action' == path:
             self.write('/portfolio/autoInvest.action')
-        elif '/portfolio/viewOrder.action' == self.path:
+        elif '/portfolio/viewOrder.action' == path:
             self.write('/portfolio/viewOrder.action')
 
         else:
@@ -241,11 +248,15 @@ class TestServerHandler(BaseHTTPRequestHandler):
         self.process_url()
         self.process_post_data()
 
+        path = self.path
+        data = self.data
+        query = self.query
+
         #self.log('Post Data {0}'.format(self.data))
 
         # Login - if the email and password match, set the cookie
-        if '/account/login.action' == self.path:
-            if self.data['login_email'] == self.auth['email'] and self.data['login_password'] == self.auth['password']:
+        if '/account/login.action' == path:
+            if data['login_email'] == self.auth['email'] and data['login_password'] == self.auth['password']:
                 self.send_headers(302, {
                     'Set-Cookie': 'LC_FIRSTNAME=John',
                     'Content-Type': 'text/plain',
@@ -256,10 +267,10 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 return self.output_file('login_fail.html')
 
         # Investment option search
-        elif '/portfolio/lendingMatchOptionsV2.action' == self.path:
+        elif '/portfolio/lendingMatchOptionsV2.action' == path:
 
             # Default filters
-            if self.data['filter'] == 'default':
+            if data['filter'] == 'default':
                 return self.output_file('lendingMatchOptionsV2.json')
 
             # Custom filters
@@ -267,38 +278,53 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 return self.output_file('lendingMatchOptionsV2_filter.json')
 
         # Order confirmation
-        elif '/portfolio/orderConfirmed.action' == self.path:
-            return self.output_file('orderConfirmed.html')
+        elif '/portfolio/orderConfirmed.action' == path:
+            if 'struts.token' in data and data['struts.token'].strip() != '':
+                return self.output_file('orderConfirmed.html')
+            else:
+                print "No struts token passed"
+                self.write('{"error": "No struts token passed"}')
 
         # Assign to portfolio
-        elif '/data/portfolioManagement' == self.path:
+        elif '/data/portfolioManagement' == path:
 
-            if 'addToLCPortfolio' == self.query['method']:
-                return self.output_file('portfolioManagement_addToLCPortfolio.json')
-            elif 'createLCPortfolio' == self.query['method']:
-                return self.output_file('portfolioManagement_createLCPortfolio.json')
-            elif 'method' in self.query:
-                return self.write('Unknown method: {0}'.format(self.query.method))
+            if 'method' in query:
+                # Existing portfolio
+                if 'addToLCPortfolio' == query['method']:
+                    http_session['existing_portfolio'] = query['lcportfolio_name']
+                    self.output_file('portfolioManagement_addToLCPortfolio.json')
+
+                # New portfolio
+                elif 'createLCPortfolio' == query['method']:
+                    http_session['new_portfolio'] = query['lcportfolio_name']
+                    self.output_file('portfolioManagement_createLCPortfolio.json')
+
+                else:
+                    return self.write('Unknown method: {0}'.format(query.method))
             else:
-                return self.write('No method')
+                self.write('{"error": "No method passed"}')
+
+        # Select a loan note
+        elif '/browse/updateLSRAj.action' == path:
+            return self.output_file('updateLSRAj.json')
 
         # Disable the session
-        elif '/session/disabled' == self.path:
+        elif '/session/disabled' == path:
             session_disabled = True
             http_session = {}
             self.write('Session disabled')
 
         # Enable the session
-        elif '/session/enabled' == self.path:
+        elif '/session/enabled' == path:
             session_disabled = False
             self.write('Session enabled')
 
         # Add the post data to the session
-        elif '/session' == self.path:
+        elif '/session' == path:
             if session_disabled is True:
                 self.write('{"error": "Session disabled"}')
             else:
-                for key, values in self.data.iteritems():
+                for key, values in data.iteritems():
                     self.add_session(key, value)
                 self.send_headers(302, {'location': '/session'})
 

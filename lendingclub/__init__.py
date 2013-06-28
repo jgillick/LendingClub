@@ -55,14 +55,6 @@ class LendingClub:
         if self.__logger:
             self.__logger.debug(message)
 
-    def __json_success(self, response):
-        """
-        Check JSON response for a success flag
-        """
-        if type(response) is dict and 'result' in response and response['result'] == 'success':
-            return True
-        return False
-
     def set_logger(self, logger):
         """
         Set a logger to send debug messages to
@@ -95,7 +87,7 @@ class LendingClub:
             response = self.session.get('/browse/cashBalanceAj.action')
             json_response = response.json()
 
-            if self.__json_success(json_response):
+            if self.session.json_success(json_response):
                 self.__log('Cash available: {0}'.format(json_response['cashBalance']))
                 cash_value = json_response['cashBalance']
 
@@ -123,7 +115,7 @@ class LendingClub:
         json_response = response.json()
 
         # Get portfolios and create a list of names
-        if self.__json_success(json_response):
+        if self.session.json_success(json_response):
             folios = json_response['results']
 
         return folios
@@ -155,7 +147,7 @@ class LendingClub:
         response = self.session.post('/browse/browseNotesAj.action', data=payload)
         json_response = response.json()
 
-        if self.__json_success(json_response):
+        if self.session.json_success(json_response):
             results = json_response['searchresult']
 
             # Normalize results by converting loanGUID -> loan_id
@@ -203,7 +195,7 @@ class LendingClub:
         json_response = response.json()
 
         # Options were found
-        if self.__json_success(json_response) and 'lmOptions' in json_response:
+        if self.session.json_success(json_response) and 'lmOptions' in json_response:
             options = json_response['lmOptions']
 
             # Nothing found
@@ -298,6 +290,9 @@ class Order:
         """
         self.lc = lc
 
+    def __log(self, msg):
+        self.lc._LendingClub__log(msg)
+
     def add(self, loan_id, amount):
         """
         Add a loan and amount you want to invest, to your order.
@@ -368,11 +363,11 @@ class Order:
         token = self.__get_strut_token()
         self.order_id = self.__place_order(token)
 
-        self.lc.__log('Order #{0} was successfully submitted'.format(self.order_id))
+        self.__log('Order #{0} was successfully submitted'.format(self.order_id))
 
         # Assign to portfolio
         if portfolio is not None:
-            self.__assign_to_portfolio()
+            self.__assign_to_portfolio(portfolio)
 
         return self.order_id
 
@@ -393,12 +388,12 @@ class Order:
                 'investment_amount': amount,
                 'remove': 'false'
             }
-            response = self.session.post('/browse/updateLSRAj.action', data=payload)
+            response = self.lc.session.post('/browse/updateLSRAj.action', data=payload)
             json_response = response.json()
 
             # Ensure it was successful before moving on
-            if self.lc.__json_success(json_response):
-                raise LendingClubError('Could not stage loan {0} on the order', response)
+            if not self.lc.session.json_success(json_response):
+                raise LendingClubError('Could not stage loan {0} on the order: {1}'.format(loan_id), response)
 
         #
         # Add all staged loans to the order
@@ -406,14 +401,14 @@ class Order:
         payload = {
             'method': 'addToPortfolioNew'
         }
-        response = self.lc.session.post('/data/portfolio', data=payload)
+        response = self.lc.session.get('/data/portfolio', query=payload)
         json_response = response.json()
 
-        if self.lc.__json_success(json_response):
-            self.lc.__log(json_response['message'])
+        if self.lc.session.json_success(json_response):
+            self.__log(json_response['message'])
             return True
         else:
-            raise self.lc.__log('Could not add loans to the order: {0}'.format(response.text))
+            raise self.__log('Could not add loans to the order: {0}'.format(response.text))
             raise LendingClubError('Could not add loans to the order', response.text)
 
     def __get_strut_token(self):
@@ -431,11 +426,11 @@ class Order:
             if strut_tag:
                 return strut_tag['value']
             else:
-                self.lc.__log('No struts token! {0}', response.text)
+                self.__log('No struts token! {0}', response.text)
                 raise LendingClubError('Could not find the struts token to place order with', response)
 
         except Exception as e:
-            self.lc.__log('Could not get struts token. Error message: {0}'.filter(str(e)))
+            self.__log('Could not get struts token. Error message: {0}'.filter(str(e)))
             raise LendingClubError('Could not get struts token. Error message: {0}'.filter(str(e)))
 
     def __place_order(self, token):
@@ -470,7 +465,7 @@ class Order:
 
             # Did not find an ID
             if order_id == 0:
-                self.lc.__log('An investment order was submitted, but a confirmation ID could not be determined')
+                self.__log('An investment order was submitted, but a confirmation ID could not be determined')
                 raise LendingClubError('No order ID was found when placing the order.', response)
             else:
                 return order_id
@@ -489,55 +484,51 @@ class Order:
         """
         assert self.order_id > 0, 'The order has not been processed yet'
 
-        # Assign to portfolio
-        try:
+        response = None
 
-            # Get loan IDs as a list
-            loan_ids = []
-            for loan_id, amount in self.loans.iteritems():
-                loan_ids.append(loan_id)
+        # Get loan IDs as a list
+        loan_ids = []
+        for loan_id, amount in self.loans.iteritems():
+            loan_ids.append(loan_id)
 
-            # Data
-            order_ids = [self.order_id]*len(loan_ids)  # Make a list of 1 order ID per loan
-            post = {
-                'loan_id': loan_ids,
-                'record_id': loan_ids,
-                'order_id': order_ids
-            }
-            query = {
-                'method': 'createLCPortfolio',
-                'lcportfolio_name': portfolio
-            }
+        # Data
+        order_ids = [self.order_id]*len(loan_ids)  # Make a list of 1 order ID per loan
+        post = {
+            'loan_id': loan_ids,
+            'record_id': loan_ids,
+            'order_id': order_ids
+        }
+        query = {
+            'method': 'createLCPortfolio',
+            'lcportfolio_name': portfolio
+        }
 
-            # Is it an existing portfolio
-            existing = self.lc.get_portfolio_list()
-            for folio in existing:
-                if folio['portfolioName'] == portfolio:
-                    query['method'] = 'addToLCPortfolio'
+        # Is it an existing portfolio
+        existing = self.lc.get_portfolio_list()
+        for folio in existing:
+            if folio['portfolioName'] == portfolio:
+                query['method'] = 'addToLCPortfolio'
 
-            # Send
-            response = self.lc.session.post('/data/portfolioManagement', query=post, data=query)
-            json_response = response.json()
+        # Send
+        response = self.lc.session.post('/data/portfolioManagement', query=query, data=post)
+        json_response = response.json()
 
-            # Failed
-            if not self.lc.__json_success(response):
-                raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\''.format(str(self.order_id), portfolio), response)
+        # Failed
+        if not self.lc.session.json_success(json_response):
+            raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\''.format(str(self.order_id), portfolio), response)
 
-            # Success
+        # Success
+        else:
+
+            # Assigned to another portfolio, for some reason, raise warning
+            if 'portfolioName' in json_response and json_response['portfolioName'] != portfolio:
+                raise LendingClubError('Added order #{0} to portfolio "{1}" - NOT - "{2}", and I don\'t know why'.format(str(self.order_id), json_response['portfolioName'], portfolio))
+
+            # Assigned to the correct portfolio
             else:
+                self.__log('Added order #{0} to portfolio "{1}"'.format(str(self.order_id), portfolio))
 
-                # Assigned to another portfolio, for some reason, raise warning
-                if 'portfolioName' in json_response and json_response['portfolioName'] != self.settings['portfolio']:
-                    raise LendingClubError('Added order #{0} to portfolio "{1}" - NOT - "{2}", and I don\'t know why'.format(str(self.order_id), json_response['portfolioName'], portfolio))
-
-                # Assigned to the correct portfolio
-                else:
-                    self.lc.__log('Added order #{0} to portfolio "{1}"'.format(str(self.order_id), portfolio))
-
-                return True
-
-        except Exception as e:
-            raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\': {2}'.format(self.order_id, portfolio, str(e)), response)
+            return True
 
         return False
 
