@@ -32,7 +32,7 @@ THE SOFTWARE.
 import re
 import os
 from bs4 import BeautifulSoup
-from lendingclub.search import Filter
+from lendingclub.filters import Filter
 from lendingclub.session import Session
 
 
@@ -154,6 +154,9 @@ class LendingClub:
             for loan in results['loans'].iteritems():
                 loan['loan_id'] = loan['loanGUID']
 
+            # Validate that fractions do indeed match the filters
+            filters.validate(results['loans'])
+
             return results
 
         return False
@@ -259,6 +262,9 @@ class LendingClub:
             else:
                 self.__log('Couldn\'t load the loan fractions for the selected portfolio')
                 return False
+
+            # Validate that fractions do indeed match the filters
+            filters.validate(fractions)
 
             # Reset portfolio search session
             self.session.clear_session_order()

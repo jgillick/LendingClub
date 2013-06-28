@@ -35,10 +35,16 @@ from pybars import Compiler
 
 class Filter(dict):
 
+    tmpl_file = False
+    __initialized = False
+    __normalizing = False
+
     def __init__(self):
         """
         Set the default search filter values
         """
+
+        # Set filter values
         self['max_per_note'] = 0    # The most you most you want to invest per note, or 0 for no limit
         self['term'] = {
             'Year3': True,
@@ -57,13 +63,31 @@ class Filter(dict):
             'G': False
         }
 
+        # Set the template file path
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
+
+        self.__initialized = True
+
     def __getitem__(self, key):
         self.normalize()
-        return self[key]
+        return self.__dict__[key]
 
     def __setitem__(self, key, value):
+
+        # If setting grades, merge dictionary instead of replace
+        if key == 'grades' and self.__initialized is True:
+            assert type(value) is dict, 'The grades filter must be a dictionary object'
+            for grade, grade_value in self['grades'].iteritems():
+                if grade in value:
+                    assert type(value[grade]) is bool, 'Grade values must be boolean'
+                    self['grades'][grade] = value[grade]
+
+            value = self['grades']
+
+        # Set value and normalize
+        self.__dict__[key] = value
         self.normalize()
-        self[key] = value
 
     def __normalize_grades(self):
         """
@@ -95,8 +119,15 @@ class Filter(dict):
         For example, if you set grade 'B' to True, then 'All'
         should be set to False
         """
+
+        # Don't normalize if we're already normalizing or intializing
+        if self.__normalizing is True or self.__initialized is False:
+            return
+
+        self.__normalizing = True
         self.__normalize_grades()
         self.__normalize_progress()
+        self.__normalizing = False
 
     def validate(self, results):
         """
@@ -129,6 +160,7 @@ class Filter(dict):
 
         # Check required keys for a loan
         req = {
+            'loan_id': None,
             'loanGrade': 'grade',
             'loanLength': 'term',
             'loanUnfundedAmount': 'progress',
@@ -173,14 +205,12 @@ class Filter(dict):
         self.__normalize_progress()
 
         # Get the template
-        this_path = os.path.dirname(os.path.realpath(__file__))
-        tmpl_file = os.path.join(this_path, 'filter.handlebars')
-        tmpl_source = unicode(open(tmpl_file).read())
+        tmpl_source = unicode(open(self.tmpl_file).read())
 
         # Process template
         compiler = Compiler()
         template = compiler.compile(tmpl_source)
-        out = template(self)
+        out = template(self.__dict__)
         if not out:
             return False
         out = ''.join(out)
