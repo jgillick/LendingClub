@@ -33,7 +33,7 @@ import re
 from pybars import Compiler
 
 
-class Filters(dict):
+class Filter(dict):
 
     tmpl_file = False
     __initialized = False
@@ -230,9 +230,6 @@ class Filters(dict):
         Returns the JSON string that LendingClub expects for it's search
         """
 
-        self.__normalize_grades()
-        self.__normalize_progress()
-
         # Get the template
         tmpl_source = unicode(open(self.tmpl_file).read())
 
@@ -264,7 +261,7 @@ class Filters(dict):
         return out
 
 
-class SavedFilter(Filters):
+class SavedFilter(Filter):
     """
     Instead of building a filter, pull a filter you have created and
     saved on LendingClub.
@@ -281,20 +278,40 @@ class SavedFilter(Filters):
         """
         pass
 
-    def __getitem__(self, key):
-        raise SavedFilterError('A saved filter cannot be inspected')
-
     def __setitem__(self, key, value):
         raise SavedFilterError('A saved filter cannot be modified')
 
+    def __normalize():
+        pass
+
     def validate(self, results):
-        raise SavedFilterError('A saved filter cannot be validated')
+        return True
 
     def validate_one(self, loan):
-        raise SavedFilterError('A saved filter cannot be validated')
+        return True
 
     def search_string(self):
         return self.json
+
+
+class FilterByID(Filter):
+    """
+    Creates a filter by loan_id
+    """
+
+    def __init__(self, loan_id):
+        self['loan_id'] = loan_id
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
+
+    def validate(self, results):
+        return True
+
+    def validate_one(self, loan):
+        return True
+
+    def __normalize():
+        pass
 
 
 class FilterValidationError(Exception):

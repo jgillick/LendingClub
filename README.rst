@@ -3,19 +3,19 @@ Lending Club API
 
 An attempt to extract the API from the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project into a standalone API module. The currently committed code does not work yet, but should soon. Until then, you should be able to use the modules from the auto investor project.
 
-Example
+Examples
 =======
 
-Here's a step-by-step example of searching for grade B loans and investing in the first one:
+Here's a step-by-step example of searching for grade B loans and investing in the first one::
 
     >>> from lendingclub import LendingClub
-    >>> from lendingclub.filters import Filters
+    >>> from lendingclub.filters import Filter
     >>> lc = LendingClub()
     >>> lc.authenticate()
     Email:test@test.com
     Password:
     True
-    >>> filters = Filters()
+    >>> filters = Filter()
     >>> filters['grades']['B'] = True      # Filter for only B grade loans
     >>> results = lc.search(filters)       # Search using this filter
     >>> len(results['loans'])              # See how many results returned
@@ -28,6 +28,36 @@ Here's a step-by-step example of searching for grade B loans and investing in th
     1861879
     >>> order.order_id                     # See the order ID
     1861879
+
+Here's how you would create a diversified portfolio of loan notes. In this particular example, we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return of 17% - 19%::
+
+    >>> from lendingclub import LendingClub
+    >>> from lendingclub.filters import Filter
+    >>> lc = LendingClub()
+    >>> lc.authenticate()
+    Email:test@test.com
+    Password:
+    True
+    >>> filters = Filter()
+    >>> filters['grades']['B'] = True
+    >>> filters['grades']['C'] = True
+    >>> filters['grades']['D'] = True
+    >>> filters['grades']['E'] = True
+    >>> lc.get_cash_balance()
+    463.80000000000001
+    >>> portfolio = lc.build_portfolio(400, 17.0, 19.0, filters)
+    >>> len(portfolio['loan_fractions'])
+    16
+    >>> order = lc.start_order()
+    >>> order.add_batch(portfolio)
+    >>> order.execute()
+
+Pro Tips
+========
+
+You can define the filters you want to change at init::
+
+    filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
 
 License
 =======

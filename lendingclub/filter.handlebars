@@ -1,5 +1,6 @@
 {{! A handlebars template to create the search filter JSON string }}
 [
+    {{#if term}}
     {
         "m_id": 39,
         "m_metadata": {
@@ -59,6 +60,8 @@
         "m_visible": false,
         "m_position": 0
     },
+    {{/if}}
+    {{#if exclude_existing}}
     {
         "m_id": 38,
         "m_metadata": {
@@ -86,18 +89,17 @@
             ]
         },
         "m_value": [
-        {{#if exclude_existing}}
             {
                 "value": true,
                 "label": "Exclude loans invested in",
                 "sqlValue": null,
                 "valueIndex": 0
             }
-        {{/if}}
         ],
         "m_visible": false,
         "m_position": 0
     },
+    {{/if}}
     {{#if funding_progress}}
     {
         "m_id": 15,
@@ -197,6 +199,7 @@
         "m_position": 0
     },
     {{/if}}
+    {{#if grades }}
     {
         "m_id": 10,
         "m_metadata": {
@@ -335,6 +338,29 @@
         "m_visible": false,
         "m_position": 0
     },
+    {{/if}}
+    {{#if loan_id}}
+    {
+        "m_id": 43,
+        "m_metadata": {
+          "m_controlValues": null,
+          "m_type": "SVAL",
+          "m_rep": "TEXTBOX",
+          "m_label": "Loan ID",
+          "id": 43,
+          "m_onHoverHelp": "Search for a specific set of Loans by entering their Loan ID (separated by a comma).",
+          "m_className": "classname",
+          "m_defaultValue": []
+        },
+        "m_value": [
+          {
+            "value": "{{loan_id}}"
+          }
+        ],
+        "m_visible": true,
+        "m_position": 0
+    },
+    {{/if}}
     {
         "m_id": 37,
         "m_metadata": {

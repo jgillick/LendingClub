@@ -226,6 +226,10 @@ class TestServerHandler(BaseHTTPRequestHandler):
         elif '/data/portfolio' == path and 'addToPortfolioNew' == query['method']:
             self.output_file('portfolio_addToPortfolioNew.json')
 
+        # Stage an order 2
+        elif '/data/portfolio' == path and 'addToPortfolio' == query['method']:
+            self.output_file('portfolio_addToPortfolio.json')
+
         # Loan list for validation
         elif '/filter_validation' == path:
             self.output_file('filter_validate.json')

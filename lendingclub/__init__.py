@@ -32,7 +32,7 @@ THE SOFTWARE.
 import re
 import os
 from bs4 import BeautifulSoup
-from lendingclub.filters import Filters
+from lendingclub.filters import Filter, FilterByID
 from lendingclub.session import Session
 
 
@@ -129,7 +129,7 @@ class LendingClub:
             start_index -- Only 100 records will be returned at a time, so use this to start at a later index.
                             For example, to get the next 100, set start_index to 100
         """
-        assert filters is None or type(filters) is Filters, 'filter is not a lendingclub.filters.Filters'
+        assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
         # Set filters
         if filters is None:
@@ -176,7 +176,7 @@ class LendingClub:
 
         Returns a dict representing a new portfolio or False if nothing was found.
         """
-        assert filters is None or type(filters) is Filters, 'filter is not a lendingclub.filters.Filters'
+        assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
         # Set filters
         if filters is None:
@@ -410,17 +410,35 @@ class Order:
         # Stage all the loans to the order
         #
         for loan_id, amount in self.loans.iteritems():
+
+            # You have to search before you can stage
+            f = FilterByID(loan_id)
+            results = self.lc.search(f)
+            if len(results['loans']) == 0:
+                raise LendingClubError('Could not find a loan for ID {0}: {1}'.format(loan_id, results.text), results)
+
+            # Stage
+
+            # payload = {
+            #     'loan_id': loan_id,
+            #     'investment_amount': amount,
+            #     'remove': 'false'
+            # }
+            # response = self.lc.session.post('/browse/updateLSRAj.action', data=payload)
+            # json_response = response.json()
+
             payload = {
+                'method': 'addToPortfolio',
                 'loan_id': loan_id,
-                'investment_amount': amount,
+                'loan_amount': amount,
                 'remove': 'false'
             }
-            response = self.lc.session.post('/browse/updateLSRAj.action', data=payload)
+            response = self.lc.session.get('/data/portfolio', query=payload)
             json_response = response.json()
 
             # Ensure it was successful before moving on
             if not self.lc.session.json_success(json_response):
-                raise LendingClubError('Could not stage loan {0} on the order: {1}'.format(loan_id), response)
+                raise LendingClubError('Could not stage loan {0} on the order: {1}'.format(loan_id, response.text), response)
 
         #
         # Add all staged loans to the order
