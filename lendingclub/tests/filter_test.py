@@ -3,19 +3,22 @@
 import sys
 import json as pyjson
 import unittest
+from logger import TestLogger
+from server import ServerThread
 
 sys.path.insert(0, '.')
 sys.path.insert(0, '../')
 sys.path.insert(0, '../../')
 
-from search import Filters
+from lendingclub import LendingClub
+from lendingclub.filters import Filter, FilterValidationError
 
 
 class TestFilters(unittest.TestCase):
     filters = None
 
     def setUp(self):
-        self.filters = Filters()
+        self.filters = Filter()
 
     def tearDown(self):
         pass
@@ -35,6 +38,7 @@ class TestFilters(unittest.TestCase):
         Test the default state, having 36 and 60 month terms
         """
         values = self.get_values(39)
+        print values
         self.assertEqual(len(values), 2)
         self.assertEqual(values[0]['value'], 'Year3')
         self.assertEqual(values[1]['value'], 'Year5')
@@ -75,11 +79,15 @@ class TestFilters(unittest.TestCase):
 
     def test_default_funding_progress(self):
         values = self.get_values(15)
-        self.assertEqual(values[0]['value'], 0)
+        self.assertEqual(values, None)
 
-    def test_funding_progress(self):
+    def test_funding_progress_rounding(self):
+        """ test_funding_progress_rounding
+        Funding progress should be rounded to the nearest 10
+        """
+        self.filters['funding_progress'] = 56
         values = self.get_values(15)
-        self.assertEqual(values[0]['value'], 0)
+        self.assertEqual(values[0]['value'], 60)
 
     def test_funding_progress_set(self):
         """ test_funding_progress_round_up
@@ -127,5 +135,148 @@ class TestFilters(unittest.TestCase):
         self.assertEqual(values[0]['value'], 'C')
 
 
+class TestFilterValidation(unittest.TestCase):
+    filters = None
+    logger = None
+    lc = None
+    loan_list = None
+
+    def setUp(self):
+        self.filters = Filter()
+        self.filters['exclude_existing'] = False
+        self.logger = TestLogger()
+
+        self.lc = LendingClub(logger=self.logger)
+        self.lc.session.base_url = 'http://127.0.0.1:8000/'
+        self.lc.session.set_logger(None)
+        self.lc.authenticate('test@test.com', 'supersecret')
+
+        response = self.lc.session.get('/filter_validation')
+        json_response = response.json()
+        self.loan_list = json_response['loanFractions']
+
+    def tearDown(self):
+        pass
+
+    def test_validation_defaults(self):
+        """ test_validation_defaults
+        Default filters should match
+        """
+        self.assertTrue(self.filters.validate(self.loan_list))
+
+    def test_validation_grade_valid(self):
+        self.filters['C'] = True
+        self.assertTrue(self.filters.validate(self.loan_list))
+
+    def test_validation_grade_fail(self):
+        self.filters['grades']['B'] = True
+        self.assertRaises(
+            FilterValidationError,
+            lambda: self.filters.validate(self.loan_list)
+        )
+
+    def test_validation_term_36(self):
+        """ test_validation_term_36
+        Should fail on the 60 month loan, loan_id: 12345
+        """
+        self.filters['term']['Year3'] = True
+        self.filters['term']['Year5'] = False
+        try:
+            self.filters.validate(self.loan_list)
+
+        # Check the loan it failed on
+        except FilterValidationError as e:
+            self.assertEqual(e.loan['loan_id'], 12345)
+
+        # Invalid Exception
+        except Exception:
+            self.assertTrue(False)
+
+    def test_validation_term_60(self):
+        """ test_validation_term_60
+        Should fail on the 36 month loan, loan_id: 23456
+        """
+        self.filters['term']['Year3'] = False
+        self.filters['term']['Year5'] = True
+        try:
+            self.filters.validate(self.loan_list)
+
+        # Check the loan it failed on
+        except FilterValidationError as e:
+            self.assertEqual(e.loan['loan_id'], 23456)
+
+        # Invalid Exception
+        except Exception:
+            self.assertTrue(False)
+
+    def test_validation_progress_70(self):
+        """ test_validation_progress_70
+        Loan 12345 is 91 percent funded
+        Loan 23456 is 77 percent funded
+        """
+        self.filters['funding_progress'] = 70
+        self.assertTrue(self.filters.validate(self.loan_list))
+
+    def test_validation_progress_90(self):
+        """ test_validation_term_90
+        Should fail
+        Loan 12345 is 91 percent funded
+        Loan 23456 is 77 percent funded
+        """
+        self.filters['funding_progress'] = 90
+        try:
+            self.filters.validate(self.loan_list)
+
+        # Check the loan it failed on
+        except FilterValidationError as e:
+            self.assertEqual(e.loan['loan_id'], 23456)
+
+        # Invalid Exception
+        except Exception:
+            self.assertTrue(False)
+
+    def test_validation_progress_95(self):
+        """ test_validation_progress_95
+        Should fail
+        Loan 12345 is 91 percent funded
+        Loan 23456 is 77 percent funded
+        """
+        self.filters['funding_progress'] = 95
+        try:
+            self.filters.validate(self.loan_list)
+
+        # Check the loan it failed on
+        except FilterValidationError as e:
+            self.assertEqual(e.loan['loan_id'], 12345)
+
+        # Invalid Exception
+        except Exception:
+            self.assertTrue(False)
+
+    def test_validation_exclude_existing(self):
+        """ test_validation_exclude_existing
+        Should fail on loan 23456, which the user is already invested in.
+        """
+        self.filters['exclude_existing'] = True
+        try:
+            self.filters.validate(self.loan_list)
+
+        # Check the loan it failed on
+        except FilterValidationError as e:
+            self.assertEqual(e.loan['loan_id'], 23456)
+
+        # Invalid Exception
+        except Exception:
+            self.assertTrue(False)
+
+
 if __name__ == '__main__':
+    # Start the web-server in a background thread
+    http = ServerThread()
+    http.start()
+
+    # Run tests
     unittest.main()
+
+    # Stop threads
+    http.stop()

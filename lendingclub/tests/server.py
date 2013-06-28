@@ -183,25 +183,25 @@ class TestServerHandler(BaseHTTPRequestHandler):
 
         # Summary page
         if '/account/summary.action' == path:
-            return self.write('Summary Page')
+            self.write('Summary Page')
 
         # Cash balance JSON
         elif '/browse/cashBalanceAj.action' == path:
-            return self.output_file('cashBalanceAj.json')
+            self.output_file('cashBalanceAj.json')
 
         # Portfolio list
         elif '/data/portfolioManagement' == path:
             if 'method' in query:
                 if query['method'] == 'getLCPortfolios':
-                    return self.output_file('portfolioManagement_getLCPortfolios.json')
+                    self.output_file('portfolioManagement_getLCPortfolios.json')
                 else:
-                    return self.write('Unknown method {0}'.format(query['method']))
+                    self.write('Unknown method {0}'.format(query['method']))
             else:
-                return self.write('No method provided')
+                self.write('No method provided')
 
         # Place order and strut token
         elif '/portfolio/placeOrder.action' == path:
-            return self.output_file('placeOrder.html')
+            self.output_file('placeOrder.html')
 
         # Select portfolio option and save to session
         elif '/portfolio/recommendPortfolio.action' == path:
@@ -224,7 +224,11 @@ class TestServerHandler(BaseHTTPRequestHandler):
 
         # Stage an order
         elif '/data/portfolio' == path and 'addToPortfolioNew' == query['method']:
-            return self.output_file('portfolio_addToPortfolioNew.json')
+            self.output_file('portfolio_addToPortfolioNew.json')
+
+        # Loan list for validation
+        elif '/filter_validation' == path:
+            self.output_file('filter_validate.json')
 
         # Get a dump of the session
         elif '/session' == path:
@@ -264,23 +268,23 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 })
                 return
             else:
-                return self.output_file('login_fail.html')
+                self.output_file('login_fail.html')
 
         # Investment option search
         elif '/portfolio/lendingMatchOptionsV2.action' == path:
 
             # Default filters
             if data['filter'] == 'default':
-                return self.output_file('lendingMatchOptionsV2.json')
+                self.output_file('lendingMatchOptionsV2.json')
 
             # Custom filters
             else:
-                return self.output_file('lendingMatchOptionsV2_filter.json')
+                self.output_file('lendingMatchOptionsV2_filter.json')
 
         # Order confirmation
         elif '/portfolio/orderConfirmed.action' == path:
             if 'struts.token' in data and data['struts.token'].strip() != '':
-                return self.output_file('orderConfirmed.html')
+                self.output_file('orderConfirmed.html')
             else:
                 print "No struts token passed"
                 self.write('{"error": "No struts token passed"}')
@@ -300,13 +304,13 @@ class TestServerHandler(BaseHTTPRequestHandler):
                     self.output_file('portfolioManagement_createLCPortfolio.json')
 
                 else:
-                    return self.write('Unknown method: {0}'.format(query.method))
+                    self.write('Unknown method: {0}'.format(query.method))
             else:
                 self.write('{"error": "No method passed"}')
 
         # Select a loan note
         elif '/browse/updateLSRAj.action' == path:
-            return self.output_file('updateLSRAj.json')
+            self.output_file('updateLSRAj.json')
 
         # Disable the session
         elif '/session/disabled' == path:
@@ -346,7 +350,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
         # Delete the session
         if '/session' == self.path:
             http_session = {}
-            return self.write(json.dumps(http_session))
+            self.write(json.dumps(http_session))
 
         else:
             self.send_headers(500)
