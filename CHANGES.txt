@@ -1,0 +1,5 @@
+v0.1b
+  * Initial port from LendingClubAutoInvestor
+  * Full unit testing
+  * First end-to-end live investment made.
+  * More testing is required to ensure stability.
