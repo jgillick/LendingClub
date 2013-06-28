@@ -57,6 +57,14 @@ class Filter(dict):
             'G': False
         }
 
+    def __getitem__(self, key):
+        self.normalize()
+        return self[key]
+
+    def __setitem__(self, key, value):
+        self.normalize()
+        self[key] = value
+
     def __normalize_grades(self):
         """
         Adjust the grades list.
@@ -81,6 +89,15 @@ class Filter(dict):
 
             self['funding_progress'] = progress
 
+    def normalize(self):
+        """
+        Adjusts the values of the filters to be correct.
+        For example, if you set grade 'B' to True, then 'All'
+        should be set to False
+        """
+        self.__normalize_grades()
+        self.__normalize_progress()
+
     def validate(self, results):
         """
         Validate that the results indeed match the filters.
@@ -91,9 +108,13 @@ class Filter(dict):
 
         Parameters:
             results -- A list of loan note records returned from LendingClub
+
+        Returns True or raises FilterValidationError
         """
         for loan in results:
             self.validate_one(loan)
+
+        return True
 
     def validate_one(self, loan):
         """
@@ -101,6 +122,8 @@ class Filter(dict):
 
         Parameters:
             loan -- A single loan note record returned from LendingClub
+
+        Returns True or raises FilterValidationError
         """
         assert type(loan) is dict, 'loan parameter must be a dictionary object'
 
@@ -118,10 +141,11 @@ class Filter(dict):
 
         # Grade
         grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
-        if grade not in self.grades:
-            raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
-        elif self.grades[grade] is False:
-            raise FilterValidationError(loan=loan, criteria='grade')
+        if self.grades['All'] is not True:
+            if grade not in self.grades:
+                raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
+            elif self.grades[grade] is False:
+                raise FilterValidationError(loan=loan, criteria='grade')
 
         # Term
         if loan['loanLength'] == 36 and self['term']['Year3'] is False:
@@ -137,6 +161,8 @@ class Filter(dict):
         # Exclude existing
         if self['exclude_existing'] is True and loan['alreadyInvestedIn'] is True:
             raise FilterValidationError(loan=loan, criteria='alreadyInvestedIn')
+
+        return True
 
     def search_string(self):
         """"
