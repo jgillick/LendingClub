@@ -32,12 +32,12 @@ THE SOFTWARE.
 import re
 import os
 from bs4 import BeautifulSoup
-from lendingclub.filters import Filter
+from lendingclub.filters import Filters
 from lendingclub.session import Session
 
 
 class LendingClub:
-    logger = None
+    __logger = None
     session = Session()
     order = None
 
@@ -129,16 +129,16 @@ class LendingClub:
             start_index -- Only 100 records will be returned at a time, so use this to start at a later index.
                             For example, to get the next 100, set start_index to 100
         """
-        assert filter is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
+        assert filters is None or type(filters) is Filters, 'filter is not a lendingclub.filters.Filters'
 
         # Set filters
         if filters is None:
-            filters = 'default'
+            filter_string = 'default'
         else:
-            filters = filter.search_string()
+            filter_string = filters.search_string()
         payload = {
             'method': 'search',
-            'filter': filters,
+            'filter': filter_string,
             'startindex': start_index,
             'pagesize': 100
         }
@@ -151,11 +151,12 @@ class LendingClub:
             results = json_response['searchresult']
 
             # Normalize results by converting loanGUID -> loan_id
-            for loan in results['loans'].iteritems():
-                loan['loan_id'] = loan['loanGUID']
+            for loan in results['loans']:
+                loan['loan_id'] = int(loan['loanGUID'])
 
             # Validate that fractions do indeed match the filters
-            filters.validate(results['loans'])
+            if filters is not None:
+                filters.validate(results['loans'])
 
             return results
 
@@ -175,14 +176,14 @@ class LendingClub:
 
         Returns a dict representing a new portfolio or False if nothing was found.
         """
-        assert filters is None or type(filters) is Filter, 'filter is not a lendingclub.search.Filter'
+        assert filters is None or type(filters) is Filters, 'filter is not a lendingclub.filters.Filters'
 
         # Set filters
         if filters is None:
             filter_str = 'default'
             max_per = 25
         else:
-            filter_str = filter.search_string()
+            filter_str = filters.search_string()
             max_per = filters['max_per_note']
 
         # Start a new order
@@ -264,7 +265,8 @@ class LendingClub:
                 return False
 
             # Validate that fractions do indeed match the filters
-            filters.validate(fractions)
+            if filters is not None:
+                filters.validate(fractions)
 
             # Reset portfolio search session
             self.session.clear_session_order()
@@ -311,11 +313,19 @@ class Order:
         with the this new amount
 
         Parameters:
-            loan_id -- The ID of the loan you want to add
+            loan_id -- The ID of the loan you want to add (or a dictionary containing a loan_id value)
             amount -- The dollar amount you want to invest in this loan.
         """
         assert amount > 0 and amount % 25 == 0, 'Amount must be a multiple of 25'
         assert type(amount) in (float, int), 'Amount must be a number'
+
+        if type(loan_id) is dict:
+            loan = loan_id
+            assert 'loan_id' in loan and type(loan['loan_id']) is int, 'loan_id must be a number or dictionary containing a loan_id value'
+            loan_id = loan['loan_id']
+
+        assert type(loan_id) is int, 'loan_id must be a number'
+
         self.loans[loan_id] = amount
 
     def update(self, loan_id, amount):
@@ -447,8 +457,8 @@ class Order:
                 raise LendingClubError('Could not find the struts token to place order with', response)
 
         except Exception as e:
-            self.__log('Could not get struts token. Error message: {0}'.filter(str(e)))
-            raise LendingClubError('Could not get struts token. Error message: {0}'.filter(str(e)))
+            self.__log('Could not get struts token. Error message: {0}'.format(str(e)))
+            raise LendingClubError('Could not get struts token. Error message: {0}'.format(str(e)))
 
     def __place_order(self, token):
         """

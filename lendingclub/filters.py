@@ -33,13 +33,13 @@ import re
 from pybars import Compiler
 
 
-class Filter(dict):
+class Filters(dict):
 
     tmpl_file = False
     __initialized = False
     __normalizing = False
 
-    def __init__(self):
+    def __init__(self, filters=None):
         """
         Set the default search filter values
         """
@@ -63,11 +63,38 @@ class Filter(dict):
             'G': False
         }
 
+        # Merge in filter values
+        if filters is not None:
+            self.__merge_values(filters, self.__dict__)
+
         # Set the template file path
         this_path = os.path.dirname(os.path.realpath(__file__))
         self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
 
         self.__initialized = True
+        self.normalize()
+
+    def __merge_values(self, from_dict, to_dict):
+        """
+        Merge dictionary objects recursively, by only updating keys existing in to_dict
+        """
+        for key, value in from_dict.iteritems():
+
+            # Only if the key already exists
+            if key in to_dict:
+
+                # Make sure the values are the same datatype
+                assert type(to_dict[key]) is type(from_dict[key]), 'Data type for {0} is incorrect: {1}, should be {2}'.format(key, type(from_dict[key]), type(to_dict[key]))
+
+                # Recursively dive into the next dictionary
+                if type(to_dict[key]) is dict:
+                    to_dict[key] = self.__merge_values(from_dict[key], to_dict[key])
+
+                # Replace value
+                else:
+                    to_dict[key] = from_dict[key]
+
+        return to_dict
 
     def __getitem__(self, key):
         self.normalize()
@@ -78,16 +105,18 @@ class Filter(dict):
         # If setting grades, merge dictionary instead of replace
         if key == 'grades' and self.__initialized is True:
             assert type(value) is dict, 'The grades filter must be a dictionary object'
-            for grade, grade_value in self['grades'].iteritems():
-                if grade in value:
-                    assert type(value[grade]) is bool, 'Grade values must be boolean'
-                    self['grades'][grade] = value[grade]
-
-            value = self['grades']
+            self.__merge_values(value, self.__dict__['grades'])
+            value = self.__dict__['grades']
 
         # Set value and normalize
         self.__dict__[key] = value
         self.normalize()
+
+    def __repr__(self):
+        return repr(self.__dict__)
+
+    def __str__(self):
+        return repr(self.__dict__)
 
     def __normalize_grades(self):
         """

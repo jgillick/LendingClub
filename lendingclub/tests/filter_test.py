@@ -11,14 +11,14 @@ sys.path.insert(0, '../')
 sys.path.insert(0, '../../')
 
 from lendingclub import LendingClub
-from lendingclub.filters import Filter, FilterValidationError
+from lendingclub.filters import Filters, FilterValidationError
 
 
 class TestFilters(unittest.TestCase):
     filters = None
 
     def setUp(self):
-        self.filters = Filter()
+        self.filters = Filters()
 
     def tearDown(self):
         pass
@@ -142,7 +142,7 @@ class TestFilterValidation(unittest.TestCase):
     loan_list = None
 
     def setUp(self):
-        self.filters = Filter()
+        self.filters = Filters()
         self.filters['exclude_existing'] = False
         self.logger = TestLogger()
 

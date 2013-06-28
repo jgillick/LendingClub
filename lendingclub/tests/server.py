@@ -270,6 +270,10 @@ class TestServerHandler(BaseHTTPRequestHandler):
             else:
                 self.output_file('login_fail.html')
 
+        # Search
+        elif '/browse/browseNotesAj.action' == path and 'method' in data and data['method'] == 'search':
+            self.output_file('browseNotesAj.json')
+
         # Investment option search
         elif '/portfolio/lendingMatchOptionsV2.action' == path:
 

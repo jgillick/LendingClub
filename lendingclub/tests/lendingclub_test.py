@@ -69,6 +69,12 @@ class TestLendingClub(unittest.TestCase):
         portfolio = self.lc.build_portfolio(200, 17.6, 18.5)
         self.assertFalse(portfolio)
 
+    def test_search(self):
+        results = self.lc.search()
+        self.assertTrue(results is not False)
+        self.assertTrue('loans' in results)
+        self.assertTrue(len(results['loans']) > 0)
+
 
 if __name__ == '__main__':
     # Start the web-server in a background thread
