@@ -263,6 +263,7 @@ class Filters(dict):
 
         return out
 
+
 class SavedFilter(Filters):
     """
     Instead of building a filter, pull a filter you have created and
@@ -270,9 +271,9 @@ class SavedFilter(Filters):
 
     This kind of filter cannot be inspected or changed.
     """
-    self.filter_id = None
-    self.filter_json = None
-
+    filter_id = None
+    name = None
+    json = None
 
     def __init__(self, filter_id):
         """
@@ -293,7 +294,7 @@ class SavedFilter(Filters):
         raise SavedFilterError('A saved filter cannot be validated')
 
     def search_string(self):
-        return self.filter_json
+        return self.json
 
 
 class FilterValidationError(Exception):
