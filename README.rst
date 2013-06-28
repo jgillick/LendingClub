@@ -16,15 +16,18 @@ Here's a step-by-step example of searching for grade B loans and investing in th
     Password:
     True
     >>> filters = Filters()
-    >>> filters['grades']['B'] = True      # Search for only B grade loans
-    >>> results = lc.search(filters)
+    >>> filters['grades']['B'] = True      # Filter for only B grade loans
+    >>> results = lc.search(filters)       # Search using this filter
     >>> len(results['loans'])              # See how many results returned
+    100
     >>> results['loans'][0]['loan_id']     # See the loan_id of the first loan
+    1763030
     >>> order = lc.start_order()           # Start a new investment order
-    >>> order.add(results['loans'][0], 25) # Add the first loan to the order with a $25 investment
+    >>> order.add(5763030, 25)             # Add the first loan to the order with a $25 investment
     >>> order.execute()                    # Execute the order
-    8861879
+    1861879
     >>> order.order_id                     # See the order ID
+    1861879
 
 License
 =======
