@@ -72,7 +72,7 @@ class Filters(dict):
         self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
 
         self.__initialized = True
-        self.normalize()
+        self.__normalize()
 
     def __merge_values(self, from_dict, to_dict):
         """
@@ -97,7 +97,7 @@ class Filters(dict):
         return to_dict
 
     def __getitem__(self, key):
-        self.normalize()
+        self.__normalize()
         return self.__dict__[key]
 
     def __setitem__(self, key, value):
@@ -110,7 +110,7 @@ class Filters(dict):
 
         # Set value and normalize
         self.__dict__[key] = value
-        self.normalize()
+        self.__normalize()
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -142,7 +142,7 @@ class Filters(dict):
 
             self['funding_progress'] = progress
 
-    def normalize(self):
+    def __normalize(self):
         """
         Adjusts the values of the filters to be correct.
         For example, if you set grade 'B' to True, then 'All'
@@ -263,6 +263,38 @@ class Filters(dict):
 
         return out
 
+class SavedFilter(Filters):
+    """
+    Instead of building a filter, pull a filter you have created and
+    saved on LendingClub.
+
+    This kind of filter cannot be inspected or changed.
+    """
+    self.filter_id = None
+    self.filter_json = None
+
+
+    def __init__(self, filter_id):
+        """
+        Load the filter by ID
+        """
+        pass
+
+    def __getitem__(self, key):
+        raise SavedFilterError('A saved filter cannot be inspected')
+
+    def __setitem__(self, key, value):
+        raise SavedFilterError('A saved filter cannot be modified')
+
+    def validate(self, results):
+        raise SavedFilterError('A saved filter cannot be validated')
+
+    def validate_one(self, loan):
+        raise SavedFilterError('A saved filter cannot be validated')
+
+    def search_string(self):
+        return self.filter_json
+
 
 class FilterValidationError(Exception):
     """
@@ -288,6 +320,16 @@ class FilterValidationError(Exception):
                 self.value = 'Did not meet filter criteria for {0}'.format(criteria)
         else:
             self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+class SavedFilterError(Exception):
+    value = None
+
+    def __init__(self, value):
+        self.value = value
 
     def __str__(self):
         return repr(self.value)
