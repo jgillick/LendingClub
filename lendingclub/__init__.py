@@ -208,6 +208,7 @@ class LendingClub:
 
             # Nothing found
             if type(options) is not list or json_response['numberTicks'] == 0:
+                self.__log('No lending portfolios were returned with your search')
                 return False
 
             # Choose an investment option based on the user's min/max values
@@ -234,6 +235,7 @@ class LendingClub:
 
             # Nothing matched
             if match_option is None:
+                self.__log('No portfolios matched your percentage requirements')
                 return False
 
             # Mark this portfolio for investing (in order to get a list of all notes)
@@ -252,12 +254,13 @@ class LendingClub:
             json_response = response.json()
 
             fractions = []
-            if self.__json_success(json_response) and 'loanFractions' in json_response:
-                fractions = json_response['loan_fractions']
+            if 'loanFractions' in json_response:
+                fractions = json_response['loanFractions']
 
             if len(fractions) > 0:
                 match_option['loan_fractions'] = fractions
             else:
+                self.__log('Couldn\'t load the loan fractions for the selected portfolio')
                 return False
 
             # Reset portfolio search session
@@ -279,7 +282,7 @@ class LendingClub:
 
 class Order:
     """
-    Manages the loan notes in an investment order
+    Manages an investment order
     """
 
     loans = {}
@@ -305,7 +308,8 @@ class Order:
             loan_id -- The ID of the loan you want to add
             amount -- The dollar amount you want to invest in this loan.
         """
-        assert amount % 25 == 0, 'Amount must be a multiple of 25'
+        assert amount > 0 and amount % 25 == 0, 'Amount must be a multiple of 25'
+        assert type(amount) in (float, int), 'Amount must be a number'
         self.loans[loan_id] = amount
 
     def update(self, loan_id, amount):

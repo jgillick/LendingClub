@@ -127,6 +127,8 @@ class TestServerHandler(BaseHTTPRequestHandler):
         if not session_disabled:
             http_session[key] = value
 
+        print 'Add to session: {0}={1}'.format(key, value)
+
     def output_file(self, file_name):
         """
         Read a file from the assets directory and write it to response stream
@@ -210,8 +212,12 @@ class TestServerHandler(BaseHTTPRequestHandler):
             self.send_headers(302, {'location': '/portfolio/viewOrder.action'})
 
         # Get list of loan fractions (must have lending_match_point set in the session)
-        elif '/data/portfolio' == self.path and 'getPortfolio' == self.query['method'] and 'lending_match_point' in http_session:
-            self.output_file('portfolio_getPortfolio.json')
+        elif '/data/portfolio' == self.path and 'getPortfolio' == self.query['method']:
+            if 'lending_match_point' in http_session:
+                self.output_file('portfolio_getPortfolio.json')
+            else:
+                print 'lending_match_point was not set'
+                self.write('{"error": "The lending match point was not set"}')
 
         # Get a dump of the session
         elif '/session' == self.path:

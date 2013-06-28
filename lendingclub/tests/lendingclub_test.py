@@ -25,8 +25,9 @@ class TestLendingClub(unittest.TestCase):
 
         self.lc.authenticate('test@test.com', 'supersecret')
 
-        # Make sure session is enabled
+        # Make sure session is enabled and clear
         self.lc.session.post('/session/enabled')
+        self.lc.session.request('delete', '/session')
 
     def tearDown(self):
         pass
@@ -59,8 +60,6 @@ class TestLendingClub(unittest.TestCase):
         self.lc.session.post('/session/disabled')
 
         portfolio = self.lc.build_portfolio(200, 15, 16)
-        import json
-        print json.dumps(portfolio)
         self.assertFalse(portfolio)
 
     def test_build_portfolio_no_match(self):

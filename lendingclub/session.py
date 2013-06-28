@@ -228,6 +228,8 @@ class Session:
                 request = self.__session.get(url, params=query, data=data, allow_redirects=redirects)
             elif method == 'HEAD':
                 request = self.__session.head(url, params=query, data=data, allow_redirects=redirects)
+            elif method == 'DELETE':
+                request = self.__session.delete(url, params=query, data=data, allow_redirects=redirects)
             else:
                 raise SessionError('{0} is not a supported HTTP method'.format(method))
 
