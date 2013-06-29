@@ -1,12 +1,40 @@
 Lending Club API
 ================
 
-An attempt to extract the API from the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project into a standalone API module. The currently committed code does not work yet, but should soon. Until then, you should be able to use the modules from the auto investor project.
+A stand-alone python API for Lending Club. In a nutshell, this module lets you check your cash balance, search for notes, build orders and invest.
 
-Examples
+It is still a work in progress but I expect the first stable release by the end of July. The current release works well but may have some bugs -- use at your own risk.
+
+The code has been ported out of the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project.
+
+Disclaimer
+==========
+
+I have tested this tool to the best of my ability, but understand that it may have bugs. Use at your own risk!
+
+Requirements
+============
+
+The following Python libraries are required:
+
+* requests
+* beautifulsoup4
+* html5lib
+* pybars
+
+These can automatically be installed with `pip <http://www.pip-installer.org/en/latest/>`_::
+
+    sudo pip install requests beautifulsoup4 html5lib pybars
+
+Install
 =======
 
-Here's a step-by-step example of searching for grade B loans and investing in the first one::
+There isn't an installer for this module yet.
+
+Examples
+========
+
+Here's a step-by-step example of searching for grade B loans and investing $25 in the first one::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import Filter
@@ -29,7 +57,7 @@ Here's a step-by-step example of searching for grade B loans and investing in th
     >>> order.order_id                     # See the order ID
     1861879
 
-Here's how you would create a diversified portfolio of loan notes. In this particular example, we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return of 17% - 19%::
+Create a diversified portfolio of loan notes. Here we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return between 17% - 19%::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import Filter
@@ -55,9 +83,11 @@ Here's how you would create a diversified portfolio of loan notes. In this parti
 Pro Tips
 ========
 
-You can define the filters you want to change at init::
+You can define some of your filters in the init line::
 
     filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
+
+This will merge these values with the rest of the filters.
 
 License
 =======

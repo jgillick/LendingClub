@@ -418,15 +418,6 @@ class Order:
                 raise LendingClubError('Could not find a loan for ID {0}: {1}'.format(loan_id, results.text), results)
 
             # Stage
-
-            # payload = {
-            #     'loan_id': loan_id,
-            #     'investment_amount': amount,
-            #     'remove': 'false'
-            # }
-            # response = self.lc.session.post('/browse/updateLSRAj.action', data=payload)
-            # json_response = response.json()
-
             payload = {
                 'method': 'addToPortfolio',
                 'loan_id': loan_id,
