@@ -66,19 +66,21 @@ Create a diversified portfolio of loan notes. Here we want to invest $400 in a p
     Email:test@test.com
     Password:
     True
-    >>> filters = Filter()
-    >>> filters['grades']['B'] = True
+    >>> filters = Filter()                # Set the filters
+    >>> filters['grades']['B'] = True     # See Pro Tips for a shorter way to do this
     >>> filters['grades']['C'] = True
     >>> filters['grades']['D'] = True
     >>> filters['grades']['E'] = True
-    >>> lc.get_cash_balance()
+    >>> lc.get_cash_balance()             # See the cash you have available for investing
     463.80000000000001
+                                          # Find a portfolio to invest in ($400 & between 17-19%)
     >>> portfolio = lc.build_portfolio(400, 17.0, 19.0, filters)
-    >>> len(portfolio['loan_fractions'])
+    >>> len(portfolio['loan_fractions'])  # See how many loans are in this portfolio
     16
-    >>> order = lc.start_order()
-    >>> order.add_batch(portfolio)
-    >>> order.execute()
+    >>> order = lc.start_order()          # Start a new order
+    >>> order.add_batch(portfolio)        # Add the portfolio to the order
+    >>> order.execute()                   # Execute the order
+    1861880
 
 Pro Tips
 --------
