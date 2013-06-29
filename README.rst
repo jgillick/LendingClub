@@ -8,12 +8,12 @@ It is still a work in progress but I expect the first stable release by the end 
 The code has been ported out of the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project.
 
 Disclaimer
-==========
+----------
 
 I have tested this tool to the best of my ability, but understand that it may have bugs. Use at your own risk!
 
 Requirements
-============
+------------
 
 The following Python libraries are required:
 
@@ -27,12 +27,12 @@ These can automatically be installed with `pip <http://www.pip-installer.org/en/
     sudo pip install requests beautifulsoup4 html5lib pybars
 
 Install
-=======
+-------
 
 There isn't an installer for this module yet.
 
 Examples
-========
+--------
 
 Here's a step-by-step example of searching for grade B loans and investing $25 in the first one::
 
@@ -81,7 +81,7 @@ Create a diversified portfolio of loan notes. Here we want to invest $400 in a p
     >>> order.execute()
 
 Pro Tips
-========
+--------
 
 You can define some of your filters in the init line::
 
