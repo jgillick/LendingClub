@@ -54,7 +54,7 @@ Here's a step-by-step example of searching for grade B loans and investing $25 i
     >>> results['loans'][0]['loan_id']     # See the loan_id of the first loan
     1763030
     >>> order = lc.start_order()           # Start a new investment order
-    >>> order.add(5763030, 25)             # Add the first loan to the order with a $25 investment
+    >>> order.add(1763030, 25)             # Add the first loan to the order with a $25 investment
     >>> order.execute()                    # Execute the order
     1861879
     >>> order.order_id                     # See the order ID
