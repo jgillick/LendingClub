@@ -120,6 +120,66 @@ class LendingClub:
 
         return folios
 
+    def assign_to_portfolio(self, portfolio_name, loan_id, order_id):
+        """
+        Assign a note to a named portfolio. loan_id and order_id can be either
+        integer values or lists. If choosing lists, they both should be the same length
+        and match up. For example, order_id[5] must be the order_id for loan_id[5]
+
+        Parameters:
+            portfolio_name -- The name of the portfolio to assign it to (new or existing)
+            loan_id -- The ID (or list of IDs) of the note to assign to a portfolio
+            order_id -- The ID (or list of IDs) of the order this loan note was invested with.
+                        You can find this in the dict returned from get_note()
+
+        Returns True on success
+        """
+        response = None
+
+        assert type(loan_id) == type(order_id), "Both loan_id and order_id need to be the same type"
+        assert type(loan_id) in (int, list), "loan_id and order_id can only be int or list types"
+        assert type(loan_id) is int or (type(loan_id) is list and len(loan_id) == len(order_id)), "If order_id and loan_id are lists, they both need to be the same length"
+
+        # Data
+        post = {
+            'loan_id': loan_id,
+            'record_id': loan_id,
+            'order_id': order_id
+        }
+        query = {
+            'method': 'createLCPortfolio',
+            'lcportfolio_name': portfolio_name
+        }
+
+        # Is it an existing portfolio
+        existing = self.lc.get_portfolio_list()
+        for folio in existing:
+            if folio['portfolioName'] == portfolio_name:
+                query['method'] = 'addToLCPortfolio'
+
+        # Send
+        response = self.lc.session.post('/data/portfolioManagement', query=query, data=post)
+        json_response = response.json()
+
+        # Failed
+        if not self.lc.session.json_success(json_response):
+            raise LendingClubError('Could not assign order to portfolio \'{0}\''.format(portfolio_name), response)
+
+        # Success
+        else:
+
+            # Assigned to another portfolio, for some reason, raise warning
+            if 'portfolioName' in json_response and json_response['portfolioName'] != portfolio_name:
+                raise LendingClubError('Added order to portfolio "{0}" - NOT - "{1}", and I don\'t know why'.format(json_response['portfolioName'], portfolio_name))
+
+            # Assigned to the correct portfolio
+            else:
+                self.__log('Added order to portfolio "{0}"'.format(portfolio_name))
+
+            return True
+
+        return False
+
     def search(self, filters=None, start_index=0):
         """
         Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
@@ -277,6 +337,94 @@ class LendingClub:
 
         return False
 
+    def get_notes(self, start_index=0, per_page=100, get_all=False, sort_by='loanId', sort_dir='asc'):
+        """
+        Return all the loan notes you've invested in. By default it'll return 100 results at a time.
+
+        Parameters
+            start_index -- The result index to start on. For example, if per_page is set to 100,
+                            to get results 200 - 300, start_index should be set to 200.
+            per_page -- The number of notes you want returned per request
+            get_all -- Return all results, instead of paged.
+
+        """
+
+        index = start_index
+        notes = {
+            'loans': [],
+            'total': 0,
+            'result': 'success'
+        }
+        while True:
+            payload = {
+                'sortBy': sort_by,
+                'dir': sort_dir,
+                'startindex': index,
+                'pagesize': per_page,
+                'namespace': '/account'
+            }
+            response = self.session.post('/account/loansAj.action', data=payload)
+            json_response = response.json()
+
+            # Notes returned
+            if self.session.json_success(json_response):
+                notes['loans'] += json_response['searchresult']['loans']
+                notes['total'] = json_response['searchresult']['totalRecords']
+
+            # Error
+            else:
+                notes['result'] = json_response['result']
+                break
+
+            # Load more
+            if get_all is True and len(notes['loans']) < notes['total']:
+                index += per_page
+
+            # End
+            else:
+                break
+
+        return notes
+
+    def get_note(self, note_id=None, loan_id=None):
+        """
+        Finds the notes you've invested in by either their loan ID or note ID
+        This might be slow since it has to do a manual ID search via get_notes().
+
+        Parameters:
+            loan_id -- The loan ID of the note. This could return multiple notes.
+            note_id -- The note ID of the loan note
+
+        Returns a list of loan notes that match
+        """
+        assert loan_id is not None or note_id is not None, 'You have to searcy by loan_id OR note_id'
+
+        index = 0
+        found = []
+        search_id = loan_id if loan_id is not None else note_id
+        search_for = 'loanId' if loan_id is not None else 'noteId'
+        sort_by = search_for
+
+        while True:
+            notes = self.get_notes(start_index=index, sort_by=sort_by)
+
+            if notes['result'] != 'success':
+                break
+
+            # If the first note has a higher ID, we've passed it
+            if notes['loans'][0][search_for] > search_id:
+                break
+
+            # If the last note has a higher ID, it could be in this record set
+            if notes['loans'][-1][search_for] >= search_id:
+                for note in notes['loans']:
+                    if note[search_for] == search_id:
+                        found.append(note)
+
+            index += 100
+
+        return found
+
     def start_order(self):
         """
         Start a new investment order or loans
@@ -394,7 +542,16 @@ class Order:
 
         # Assign to portfolio
         if portfolio is not None:
-            self.__assign_to_portfolio(portfolio)
+
+            # Get loan IDs as a list
+            loan_ids = []
+            for loan_id, amount in self.loans.iteritems():
+                loan_ids.append(loan_id)
+
+            # Make a list of 1 order ID per loan
+            order_ids = [self.order_id]*len(loan_ids)
+
+            return self.lc.assign_to_portfolio(portfolio, loan_ids, order_ids)
 
         return self.order_id
 
@@ -508,65 +665,6 @@ class Order:
 
         except Exception as e:
             raise LendingClubError('Could not place the order: {0}'.format(str(e)), response)
-
-    def __assign_to_portfolio(self, portfolio):
-        """
-        Assign the order to a named portfolio, either new or existing.
-
-        Parameters:
-            portfolio -- The name of the portfolio to assign the order to
-
-        Returns True
-        """
-        assert self.order_id > 0, 'The order has not been processed yet'
-
-        response = None
-
-        # Get loan IDs as a list
-        loan_ids = []
-        for loan_id, amount in self.loans.iteritems():
-            loan_ids.append(loan_id)
-
-        # Data
-        order_ids = [self.order_id]*len(loan_ids)  # Make a list of 1 order ID per loan
-        post = {
-            'loan_id': loan_ids,
-            'record_id': loan_ids,
-            'order_id': order_ids
-        }
-        query = {
-            'method': 'createLCPortfolio',
-            'lcportfolio_name': portfolio
-        }
-
-        # Is it an existing portfolio
-        existing = self.lc.get_portfolio_list()
-        for folio in existing:
-            if folio['portfolioName'] == portfolio:
-                query['method'] = 'addToLCPortfolio'
-
-        # Send
-        response = self.lc.session.post('/data/portfolioManagement', query=query, data=post)
-        json_response = response.json()
-
-        # Failed
-        if not self.lc.session.json_success(json_response):
-            raise LendingClubError('Could not assign order #{0} to portfolio \'{1}\''.format(str(self.order_id), portfolio), response)
-
-        # Success
-        else:
-
-            # Assigned to another portfolio, for some reason, raise warning
-            if 'portfolioName' in json_response and json_response['portfolioName'] != portfolio:
-                raise LendingClubError('Added order #{0} to portfolio "{1}" - NOT - "{2}", and I don\'t know why'.format(str(self.order_id), json_response['portfolioName'], portfolio))
-
-            # Assigned to the correct portfolio
-            else:
-                self.__log('Added order #{0} to portfolio "{1}"'.format(str(self.order_id), portfolio))
-
-            return True
-
-        return False
 
 
 class LendingClubError(Exception):

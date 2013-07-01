@@ -82,6 +82,26 @@ Create a diversified portfolio of loan notes. Here we want to invest $400 in a p
     >>> order.execute()                   # Execute the order
     1861880
 
+Get a list of the loan notes that you've invested in (by default this will only return 100 at a time)::
+
+    >>> from lendingclub import LendingClub
+    >>> lc = LendingClub()
+    >>> lc.authenticate()
+    Email:test@test.com
+    Password:
+    True
+    >>> notes = lc.get_notes()                  # Get the first 100 loan notes
+    >>> notes['total']
+    630
+    >>> len(notes['loans'])
+    100
+    >>> notes = lc.get_notes(start_index=100)   # Get the next 100 loan notes
+    >>> len(notes['loans'])
+    100
+    >>> notes = lc.get_notes(get_all=True)       # Get all notes in one request (may be slow)
+    >>> len(notes['loans'])
+    630
+
 Pro Tips
 --------
 
