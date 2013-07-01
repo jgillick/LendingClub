@@ -521,17 +521,18 @@ class Order:
         if loan_id in self.loans:
             del self.loans[loan_id]
 
-    def execute(self, portfolio=None):
+    def execute(self, portfolio_name=None):
         """
         Place the order with LendingClub
 
         Parameters:
-            portfolio -- The name of the portfolio to add the invested loan notes to.
-                         This can be a new or existing portfolio name.
+            portfolio_name -- The name of the portfolio to add the invested loan notes to.
+                              This can be a new or existing portfolio name.
 
         Returns the order ID
         """
         assert self.order_id == 0, 'This order has already been place. Start a new order.'
+        assert len(self.loans) > 0, 'There aren\'t any loans in your order'
 
         # Place the order
         self.__stage_order()
@@ -541,19 +542,29 @@ class Order:
         self.__log('Order #{0} was successfully submitted'.format(self.order_id))
 
         # Assign to portfolio
-        if portfolio is not None:
-
-            # Get loan IDs as a list
-            loan_ids = []
-            for loan_id, amount in self.loans.iteritems():
-                loan_ids.append(loan_id)
-
-            # Make a list of 1 order ID per loan
-            order_ids = [self.order_id]*len(loan_ids)
-
-            return self.lc.assign_to_portfolio(portfolio, loan_ids, order_ids)
+        if portfolio_name is not None:
+            return self.assign_to_portfolio(portfolio_name)
 
         return self.order_id
+
+    def assign_to_portfolio(self, portfolio_name=None):
+        """
+        Assign all the notes in this order to a portfolio
+
+        Parameters:
+            portfolio_name -- The name of the portfolio to assign it to (new or existing)
+
+        Returns True on success
+        """
+        assert self.order_id > 0, 'You need to execute this order before you can assign to a portfolio.'
+
+        # Get loan IDs as a list
+        loan_ids = self.loans.keys()
+
+        # Make a list of 1 order ID per loan
+        order_ids = [self.order_id]*len(loan_ids)
+
+        return self.lc.assign_to_portfolio(portfolio_name, loan_ids, order_ids)
 
     def __stage_order(self):
         """
