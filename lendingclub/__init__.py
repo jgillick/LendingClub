@@ -337,7 +337,7 @@ class LendingClub:
 
         return False
 
-    def get_notes(self, start_index=0, per_page=100, get_all=False, sort_by='loanId', sort_dir='asc'):
+    def my_notes(self, start_index=0, per_page=100, get_all=False, sort_by='loanId', sort_dir='asc'):
         """
         Return all the loan notes you've invested in. By default it'll return 100 results at a time.
 
@@ -386,40 +386,119 @@ class LendingClub:
 
         return notes
 
-    def get_note(self, note_id=None, loan_id=None):
+    def get_note(self, note_id):
         """
-        Finds the notes you've invested in by either their loan ID or note ID
-        This might be slow since it has to do a manual ID search via get_notes().
+        Get a note that you've invested in by ID
 
         Parameters:
-            loan_id -- The loan ID of the note. This could return multiple notes.
-            note_id -- The note ID of the loan note
+            note_id -- The note ID
 
-        Returns a list of loan notes that match
+        Returns a matching note or False
         """
-        assert loan_id is not None or note_id is not None, 'You have to searcy by loan_id OR note_id'
 
         index = 0
-        found = []
-        search_id = loan_id if loan_id is not None else note_id
-        search_for = 'loanId' if loan_id is not None else 'noteId'
-        sort_by = search_for
-
         while True:
-            notes = self.get_notes(start_index=index, sort_by=sort_by)
+            notes = self.my_notes(start_index=index, sort_by='noteId')
 
             if notes['result'] != 'success':
                 break
 
             # If the first note has a higher ID, we've passed it
-            if notes['loans'][0][search_for] > search_id:
+            if notes['loans'][0]['noteId'] > note_id:
                 break
 
             # If the last note has a higher ID, it could be in this record set
-            if notes['loans'][-1][search_for] >= search_id:
+            if notes['loans'][-1]['noteId'] >= note_id:
                 for note in notes['loans']:
-                    if note[search_for] == search_id:
-                        found.append(note)
+                    if note['noteId'] == note_id:
+                        return note
+
+            index += 100
+
+        return False
+
+    def search_my_notes(self, loan_id=None, order_id=None, grade=None, portfolio_name=None, status=None, term=None):
+        """
+        Search for notes you are invested in. Use the parameters to define how to search.
+        Passing no parameters is like calling `my_notes(get_all=True)`
+
+        Parameters:
+            loan_id -- Search for notes that are for a specific loan
+            order_id -- Search for notes from a particular order
+            grade -- Match loan grades (A - G)
+            portfolio_name -- Search for notes in a portfolio with this name (case sensitive)
+            status -- The funding status string: issued, in-review, in-funding, current, charged-off, late, in-grace-period, fully-paid)
+            term -- Term length, either 60 or 36 (for 5 year and 3 year, respectively)
+
+        Returns a list of matching notes
+        """
+        assert grade is None or type(grade) is str, 'grade must be a string'
+        assert portfolio_name is None or type(portfolio_name) is str, 'portfolio_name must be a string'
+
+        index = 0
+        found = []
+        sort_by = 'orderId' if order_id is not None else 'loanId'
+        group_id = order_id if order_id is not None else loan_id   # first match by order, then by loan
+
+        # Normalize grade
+        if grade is not None:
+            grade = grade[0].upper()
+
+        # Normalize status
+        if status is not None:
+            status = re.sub('[^a-zA-Z\-]', ' ', status.lower())  # remove all non alpha characters
+            status = re.sub('days', ' ', status)  # remove days
+            status = re.sub('\s+', '-', status.strip())  # replace spaces with dash
+            status = re.sub('(^-+)|(-+$)', '', status)
+
+        while True:
+            notes = self.my_notes(start_index=index, sort_by=sort_by)
+
+            if notes['result'] != 'success':
+                break
+
+            # If the first note has a higher ID, we've passed it
+            if group_id is not None and notes['loans'][0][sort_by] > group_id:
+                break
+
+            # If the last note has a higher ID, it could be in this record set
+            if group_id is None or notes['loans'][-1][sort_by] >= group_id:
+                for note in notes['loans']:
+
+                    # Order ID, no match
+                    if order_id is not None and note['orderId'] != order_id:
+                        continue
+
+                    # Loan ID, no match
+                    if loan_id is not None and note['loanId'] != loan_id:
+                        continue
+
+                    # Grade, no match
+                    if grade is not None and note['rate'][0] != grade:
+                        continue
+
+                    # Portfolio, no match
+                    if portfolio_name is not None and note['portfolioName'][0] != portfolio_name:
+                        continue
+
+                    # Term, no match
+                    if term is not None and note['loanLength'] != term:
+                        continue
+
+                    # Status
+                    if status is not None:
+                        # Normalize status message
+                        nstatus = re.sub('[^a-zA-Z\-]', ' ', note['status'].lower())  # remove all non alpha characters
+                        nstatus = re.sub('days', ' ', nstatus)  # remove days
+                        nstatus = re.sub('\s+', '-', nstatus.strip())  # replace spaces with dash
+                        nstatus = re.sub('(^-+)|(-+$)', '', nstatus)
+
+                        # No match
+                        if nstatus != status:
+                            continue
+
+                    # Must be a match
+                    found.append(note)
 
             index += 100
 
