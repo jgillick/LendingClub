@@ -29,7 +29,10 @@ These can automatically be installed with `pip <http://www.pip-installer.org/en/
 Install
 -------
 
-There isn't an installer for this module yet.
+To install, run::
+
+    sudo python ./setup.py install
+
 
 Examples
 --------
@@ -56,6 +59,8 @@ Here's a step-by-step example of searching for grade B loans and investing $25 i
     1861879
     >>> order.order_id                     # See the order ID
     1861879
+    >>> order.assign_to_portfolio('Foo')   # Assign the loans in this order to a portfolio called 'Foo'
+    True
 
 Create a diversified portfolio of loan notes. Here we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return between 17% - 19%::
 
@@ -91,10 +96,10 @@ Get a list of the loan notes that you've invested in (by default this will only 
     Password:
     True
     >>> notes = lc.get_notes()                  # Get the first 100 loan notes
-    >>> notes['total']
-    630
     >>> len(notes['loans'])
     100
+    >>> notes['total']                          # See the total number of loan notes you have
+    630
     >>> notes = lc.get_notes(start_index=100)   # Get the next 100 loan notes
     >>> len(notes['loans'])
     100

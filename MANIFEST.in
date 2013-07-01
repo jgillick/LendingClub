@@ -1,0 +1,2 @@
+include *.txt *.rst *.html *.json
+recursive-include docs *.txt *.rst *.html *.json
