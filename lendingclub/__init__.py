@@ -152,17 +152,17 @@ class LendingClub:
         }
 
         # Is it an existing portfolio
-        existing = self.lc.get_portfolio_list()
+        existing = self.get_portfolio_list()
         for folio in existing:
             if folio['portfolioName'] == portfolio_name:
                 query['method'] = 'addToLCPortfolio'
 
         # Send
-        response = self.lc.session.post('/data/portfolioManagement', query=query, data=post)
+        response = self.session.post('/data/portfolioManagement', query=query, data=post)
         json_response = response.json()
 
         # Failed
-        if not self.lc.session.json_success(json_response):
+        if not self.session.json_success(json_response):
             raise LendingClubError('Could not assign order to portfolio \'{0}\''.format(portfolio_name), response)
 
         # Success
