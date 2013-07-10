@@ -129,7 +129,7 @@ Use a saved filter to search for loans **SEE NOTE BELOW**::
     Password:
     True
     >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
-    >>> print filters                            # I've pretty printed the output here
+    >>> print filters                            # I've pretty printed the output for you (you're welcome)
     [
       {'id': 7611022, 'name': '90 Percent'},
       {'id': 7611034, 'name': 'Only A'}
@@ -141,7 +141,7 @@ Use a saved filter to search for loans **SEE NOTE BELOW**::
     >>> len(results['loans'])
     100
 
-**NOTE** When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
+**NOTE:** When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
 
 Pro Tips
 --------

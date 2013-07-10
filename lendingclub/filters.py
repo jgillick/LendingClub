@@ -356,7 +356,10 @@ class SavedFilter(Filter):
             # Verify valid JSON
             try:
                 json_test = json.loads(json_text)
+
+                # Make sure it looks right
                 assert type(json_test) is list, 'Expecting a list, instead received a {0}'.format(type(json_test))
+                assert 'm_id' in json_test[0], 'Expecting m_id values in each filter'
             except Exception as e:
                 raise SavedFilterError('Could not parse filter from the JSON response: {0}'.format(str(e)))
 
