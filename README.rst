@@ -118,7 +118,7 @@ Get a list of the loan notes that you've invested in (by default this will only 
     >>> len(notes['loans'])
     630
 
-Use a saved filter to search for loans *SEE NOTE BELOW*::
+Use a saved filter to search for loans **SEE NOTE BELOW**::
 
 
     >>> from lendingclub import LendingClub
@@ -141,7 +141,7 @@ Use a saved filter to search for loans *SEE NOTE BELOW*::
     >>> len(results['loans'])
     100
 
-*NOTE* When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
+**NOTE** When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
 
 Pro Tips
 --------
