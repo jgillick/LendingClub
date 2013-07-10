@@ -305,7 +305,8 @@ class SavedFilter(Filter):
             text = response.text
 
             # Cut off everything  before "filter": [...]
-            text = re.sub('.*?,\s*["\']filter["\']:\s*\[(.*)', '[\\1', text)
+            text = re.sub('\n', '', text)
+            text = re.sub('^.*?,\s*["\']filter["\']:\s*\[(.*)', '[\\1', text)
 
             # Now loop through the string until we find the end of the filter block
             # This is a simple parser that keeps track of block elements, quotes and
@@ -354,9 +355,10 @@ class SavedFilter(Filter):
 
             # Verify valid JSON
             try:
-                json.loads(json_text)
+                json_test = json.loads(json_text)
+                assert type(json_test) is list, 'Expecting a list, instead received a {0}'.format(type(json_test))
             except Exception as e:
-                raise SavedFilterError('Could not parse filter JSON text: {0}'.format(str(e)))
+                raise SavedFilterError('Could not parse filter from the JSON response: {0}'.format(str(e)))
 
             self.json = json_text
 
