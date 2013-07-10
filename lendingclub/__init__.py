@@ -78,6 +78,13 @@ class LendingClub:
         if self.session.authenticate(email, password):
             return True
 
+    def is_site_available(self):
+        """
+        Returns true if we can access LendingClub.com
+        This is also a simple test to see if there's an internet connection
+        """
+        return self.session.is_site_available()
+
     def get_cash_balance(self):
         """
         Returns the account cash balance available for investing or False
@@ -104,6 +111,16 @@ class LendingClub:
         except Exception as e:
             self.__log('Could not get the cash balance on the account: Error: {0}\nJSON: {1}'.format(str(e), response.text))
 
+        return cash
+
+    def get_investable_balance(self):
+        """
+        Returns the amount of money you have to invest.
+        Loans are multiples of $25, so this is your total cash balance, adjusted to be a multiple of 25.
+        """
+        cash = int(self.get_cash_balance())
+        while cash % 25 != 0:
+            cash -= 1
         return cash
 
     def get_portfolio_list(self):
@@ -198,10 +215,10 @@ class LendingClub:
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
         # Set filters
-        if filters is None:
-            filter_string = 'default'
-        else:
+        if filters:
             filter_string = filters.search_string()
+        else:
+            filter_string = 'default'
         payload = {
             'method': 'search',
             'filter': filter_string,
@@ -246,10 +263,10 @@ class LendingClub:
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
         # Set filters
-        if filters is None:
-            filter_str = 'default'
-        else:
+        if filters:
             filter_str = filters.search_string()
+        else:
+            filter_str = 'default'
 
         # Start a new order
         self.session.clear_session_order()
@@ -613,7 +630,7 @@ class Order:
             portfolio_name -- The name of the portfolio to add the invested loan notes to.
                               This can be a new or existing portfolio name.
 
-        Returns the order ID
+        Returns the order ID or raises an exception
         """
         assert self.order_id == 0, 'This order has already been place. Start a new order.'
         assert len(self.loans) > 0, 'There aren\'t any loans in your order'
@@ -626,7 +643,7 @@ class Order:
         self.__log('Order #{0} was successfully submitted'.format(self.order_id))
 
         # Assign to portfolio
-        if portfolio_name is not None:
+        if portfolio_name:
             return self.assign_to_portfolio(portfolio_name)
 
         return self.order_id
