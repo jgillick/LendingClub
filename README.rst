@@ -21,21 +21,11 @@ The following Python libraries are required:
 * beautifulsoup4
 * html5lib
 * pybars
-* simplejson
-* collections (>2.7)
-* ordereddict (<=2.6)
 
 These can automatically be installed with `pip <http://www.pip-installer.org/en/latest/>`_::
 
-    sudo pip install requests beautifulsoup4 html5lib pybars simplejson
+    sudo pip install requests beautifulsoup4 html5lib pybars
 
-If you're running python 2.7+, also install collections::
-
-    sudo pip install collections
-
-Otherwise, install ordereddict::
-
-    sudo pip install ordereddict
 
 Install
 -------
@@ -129,7 +119,7 @@ Use a saved filter to search for loans **SEE NOTE BELOW**::
     Password:
     True
     >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
-    >>> print filters                            # I've pretty printed the output for you (you're welcome)
+    >>> print filters                            # I've pretty printed the output for you
     [
       {'id': 7611022, 'name': '90 Percent'},
       {'id': 7611034, 'name': 'Only A'}
