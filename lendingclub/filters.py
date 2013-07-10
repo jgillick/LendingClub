@@ -65,7 +65,7 @@ class Filter(dict):
 
         # Merge in filter values
         if filters is not None:
-            self.__merge_values(filters, self.__dict__)
+            self.__merge_values(filters, self)
 
         # Set the template file path
         this_path = os.path.dirname(os.path.realpath(__file__))
@@ -98,25 +98,19 @@ class Filter(dict):
 
     def __getitem__(self, key):
         self.__normalize()
-        return self.__dict__[key]
+        return dict.__getitem__(self, key)
 
     def __setitem__(self, key, value):
 
         # If setting grades, merge dictionary instead of replace
         if key == 'grades' and self.__initialized is True:
             assert type(value) is dict, 'The grades filter must be a dictionary object'
-            self.__merge_values(value, self.__dict__['grades'])
-            value = self.__dict__['grades']
+            self.__merge_values(value, dict.__getitem__(self, 'grades'))
+            value = self['grades']
 
         # Set value and normalize
-        self.__dict__[key] = value
+        dict.__setitem__(self, key, value)
         self.__normalize()
-
-    def __repr__(self):
-        return repr(self.__dict__)
-
-    def __str__(self):
-        return repr(self.__dict__)
 
     def __normalize_grades(self):
         """
@@ -202,10 +196,10 @@ class Filter(dict):
 
         # Grade
         grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
-        if self.grades['All'] is not True:
-            if grade not in self.grades:
+        if self['grades']['All'] is not True:
+            if grade not in self['grades']:
                 raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
-            elif self.grades[grade] is False:
+            elif self['grades'][grade] is False:
                 raise FilterValidationError(loan=loan, criteria='grade')
 
         # Term
@@ -237,7 +231,7 @@ class Filter(dict):
         # Process template
         compiler = Compiler()
         template = compiler.compile(tmpl_source)
-        out = template(self.__dict__)
+        out = template(self)
         if not out:
             return False
         out = ''.join(out)
@@ -359,7 +353,8 @@ class SavedFilter(Filter):
 
                 # Make sure it looks right
                 assert type(json_test) is list, 'Expecting a list, instead received a {0}'.format(type(json_test))
-                assert 'm_id' in json_test[0], 'Expecting m_id values in each filter'
+                assert 'm_id' in json_test[0], 'Expecting a \'m_id\' property in each filter'
+                assert 'm_value' in json_test[0], 'Expecting a \'m_value\' property in each filter'
             except Exception as e:
                 raise SavedFilterError('Could not parse filter from the JSON response: {0}'.format(str(e)))
 
