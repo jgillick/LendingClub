@@ -11,7 +11,7 @@ sys.path.insert(0, '../')
 sys.path.insert(0, '../../')
 
 from lendingclub import LendingClub
-from lendingclub.filters import Filter, FilterValidationError
+from lendingclub.filters import *
 
 
 class TestFilters(unittest.TestCase):
@@ -38,7 +38,7 @@ class TestFilters(unittest.TestCase):
         Test the default state, having 36 and 60 month terms
         """
         values = self.get_values(39)
-        print values
+
         self.assertEqual(len(values), 2)
         self.assertEqual(values[0]['value'], 'Year3')
         self.assertEqual(values[1]['value'], 'Year5')
@@ -75,7 +75,7 @@ class TestFilters(unittest.TestCase):
         self.filters['exclude_existing'] = False
         values = self.get_values(38)
 
-        self.assertEqual(len(values), 0)
+        self.assertEqual(values, None)
 
     def test_default_funding_progress(self):
         values = self.get_values(15)
@@ -129,6 +129,7 @@ class TestFilters(unittest.TestCase):
         All should be set to False if another grade is set to True
         """
         self.filters['grades']['C'] = True
+
         values = self.get_values(10)
 
         self.assertEqual(len(values), 1)
@@ -268,6 +269,37 @@ class TestFilterValidation(unittest.TestCase):
         # Invalid Exception
         except Exception:
             self.assertTrue(False)
+
+
+class TestSavedFilters(unittest.TestCase):
+    filters = None
+    logger = None
+    lc = None
+    loan_list = None
+
+    def setUp(self):
+        self.logger = TestLogger()
+
+        self.lc = LendingClub(logger=self.logger)
+        self.lc.session.base_url = 'http://127.0.0.1:8000/'
+        self.lc.session.set_logger(None)
+        self.lc.authenticate('test@test.com', 'supersecret')
+
+    def tearDown(self):
+        pass
+
+    def test_get_all_filters(self):
+        filters = SavedFilter.all_filters(self.lc)
+
+        self.assertEqual(len(filters), 2)
+        self.assertEqual(filters[0]['name'], 'Filter 1')
+
+    def test_get_saved_filters(self):
+        saved = SavedFilter(self.lc, 1234)
+
+        self.assertEqual(saved.name, 'Filter 1')
+        self.assertEqual(saved.id, 1234)
+        self.assertNotEqual(saved.search_string(), None)
 
 
 if __name__ == '__main__':

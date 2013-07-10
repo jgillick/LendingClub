@@ -30,6 +30,7 @@ THE SOFTWARE.
 
 import os
 import re
+import json
 from pybars import Compiler
 
 
@@ -39,13 +40,12 @@ class Filter(dict):
     __initialized = False
     __normalizing = False
 
-    def __init__(self, filters=None):
+    def __init__(self, max_per_note=0, filters=None):
         """
         Set the default search filter values
         """
 
         # Set filter values
-        self['max_per_note'] = 0    # The most you most you want to invest per note, or 0 for no limit
         self['term'] = {
             'Year3': True,
             'Year5': True
@@ -229,6 +229,7 @@ class Filter(dict):
         """"
         Returns the JSON string that LendingClub expects for it's search
         """
+        self.__normalize()
 
         # Get the template
         tmpl_source = unicode(open(self.tmpl_file).read())
@@ -268,15 +269,104 @@ class SavedFilter(Filter):
 
     This kind of filter cannot be inspected or changed.
     """
-    filter_id = None
+    id = None
     name = None
     json = None
+    response = None
 
-    def __init__(self, filter_id):
+    def __init__(self, lc, filter_id):
         """
-        Load the filter by ID
+        Load the filter by ID or Name
+
+        Parameters:
+            lc -- An instance of the LendingClub class
+            filter_id -- The ID of the filter to load (find it by calling `all_filters()`)
         """
-        pass
+
+        self.id = filter_id
+
+        # Attempt to load the saved filter
+        payload = {
+            'id': self.id
+        }
+        response = lc.session.get('/browse/getSavedFilterAj.action', query=payload)
+        self.response = response
+        json_response = response.json()
+
+        if lc.session.json_success(json_response):
+            self.name = json_response['filterName']
+
+            #
+            # Parse out the filter JSON string manually from the response JSON.
+            # If the filter JSON is modified at all, or any value is out of order,
+            # LendingClub will reject the filter and perform a wildcard search instead,
+            # without any error. So we need to retain the filter JSON value exactly how it is given to us.
+            #
+            text = response.text
+
+            # Cut off everything  before "filter": [...]
+            text = re.sub('.*?,\s*["\']filter["\']:\s*\[(.*)', '[\\1', text)
+
+            # Now loop through the string until we find the end of the filter block
+            # This is a simple parser that keeps track of block elements, quotes and
+            # escape characters
+            blockTracker = []
+            blockChars = {
+                '[': ']',
+                '{': '}'
+            }
+            inQuote = False
+            lastChar = None
+            json_text = ""
+            for char in text:
+                json_text += char
+
+                # Escape char
+                if char == '\\':
+                    if lastChar == '\\':
+                        lastChar = ''
+                    else:
+                        lastChar = char
+                    continue
+
+                # Quotes
+                if char == "'" or char == '"':
+                    if inQuote is False:  # Starting a quote block
+                        inQuote = char
+                    elif inQuote == char:  # Ending a quote block
+                        inQuote = False
+                    lastChar = char
+                    continue
+
+                # Start of a block
+                if char in blockChars.keys():
+                    blockTracker.insert(0, blockChars[char])
+
+                # End of a block, remove from block path
+                elif len(blockTracker) > 0 and char == blockTracker[0]:
+                    blockTracker.pop(0)
+
+                # No more blocks in the tracker which means we're at the end of the filter block
+                if len(blockTracker) == 0 and lastChar is not None:
+                    break
+
+                lastChar = char
+
+            # Verify valid JSON
+            try:
+                json.loads(json_text)
+            except Exception as e:
+                raise SavedFilterError('Could not parse filter JSON text: {0}'.format(str(e)))
+
+            self.json = json_text
+
+            # Now things get tricky, we have to retain the order of everything in the JSON otherwise the
+            # search will do a wildcard search *sigh*
+            # ordered_json = simplejson.loads(response.text, object_pairs_hook=OrderedDict)
+            # self.json = simplejson.dumps(ordered_json['filter'], separators=(',', ':'))
+
+        else:
+            raise SavedFilterError('A saved filter could not be found for ID {0}'.format(self.id), response)
 
     def __setitem__(self, key, value):
         raise SavedFilterError('A saved filter cannot be modified')
@@ -293,8 +383,23 @@ class SavedFilter(Filter):
     def search_string(self):
         return self.json
 
+    @staticmethod
+    def all_filters(lc):
+        """
+        Return a list of all your saved filters and their IDs
 
-class FilterByID(Filter):
+        Parameters:
+            lc -- An instance of the LendingClub class
+        """
+
+        response = lc.session.get('/browse/getSavedFiltersAj.action')
+        json_response = response.json()
+
+        if lc.session.json_success(json_response):
+            return json_response['filters']
+
+
+class FilterByLoanID(Filter):
     """
     Creates a filter by loan_id
     """
@@ -345,9 +450,11 @@ class FilterValidationError(Exception):
 
 class SavedFilterError(Exception):
     value = None
+    request = None
 
-    def __init__(self, value):
+    def __init__(self, value, request=None):
         self.value = value
+        self.request = request
 
     def __str__(self):
         return repr(self.value)

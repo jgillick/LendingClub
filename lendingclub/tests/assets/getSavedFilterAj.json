@@ -1,0 +1,331 @@
+{
+  "result": "success",
+  "filterName": "Filter 1",
+  "filter": [
+    {
+      "m_id": 43,
+      "m_metadata": {
+        "m_controlValues": null,
+        "m_type": "SVAL",
+        "m_rep": "TEXTBOX",
+        "m_label": "Loan ID",
+        "id": 43,
+        "m_onHoverHelp": "Search for a specific set of Loans by entering their Loan ID (separated by a comma).",
+        "m_className": "classname",
+        "m_defaultValue": []
+      },
+      "m_value": null,
+      "m_visible": false,
+      "m_position": 0
+    },
+    {
+      "m_id": 39,
+      "m_metadata": {
+        "m_controlValues": [
+          {
+            "value": "Year3",
+            "label": "36-month",
+            "sqlValue": null,
+            "valueIndex": 0
+          },
+          {
+            "value": "Year5",
+            "label": "60-month",
+            "sqlValue": null,
+            "valueIndex": 1
+          }
+        ],
+        "m_type": "MVAL",
+        "m_rep": "CHKBOX",
+        "m_label": "Term (36 - 60 month)",
+        "id": 39,
+        "m_onHoverHelp": "Select the loan maturities you are interested to invest in",
+        "m_className": "classname",
+        "m_defaultValue": [
+          {
+            "value": "Year3",
+            "label": "36-month",
+            "sqlValue": null,
+            "valueIndex": 0
+          },
+          {
+            "value": "Year5",
+            "label": "60-month",
+            "sqlValue": null,
+            "valueIndex": 1
+          }
+        ]
+      },
+      "m_value": [
+        {
+          "value": "Year3",
+          "label": "36-month",
+          "sqlValue": null,
+          "valueIndex": 0
+        },
+        {
+          "value": "Year5",
+          "label": "60-month",
+          "sqlValue": null,
+          "valueIndex": 1
+        }
+      ],
+      "m_visible": false,
+      "m_position": 0
+    },
+    {
+      "m_id": 13,
+      "m_metadata": {
+        "m_controlValues": [
+          {
+            "value": "APPROVED_CR",
+            "label": "Approved",
+            "sqlValue": null,
+            "valueIndex": 0
+          }
+        ],
+        "m_type": "SVAL",
+        "m_rep": "CHKBOX",
+        "m_label": "Review Status",
+        "id": 13,
+        "m_onHoverHelp": "Use this filter to exclude loans not yet approved by the Lending Club CREDIT Department.",
+        "m_className": "classname",
+        "m_defaultValue": []
+      },
+      "m_value": null,
+      "m_visible": false,
+      "m_position": 0
+    },
+    {
+      "m_id": 15,
+      "m_metadata": {
+        "m_controlValues": [
+          {
+            "value": 0,
+            "label": "0%",
+            "sqlValue": null,
+            "valueIndex": 0
+          },
+          {
+            "value": 10,
+            "label": "10%",
+            "sqlValue": null,
+            "valueIndex": 1
+          },
+          {
+            "value": 20,
+            "label": "20%",
+            "sqlValue": null,
+            "valueIndex": 2
+          },
+          {
+            "value": 30,
+            "label": "30%",
+            "sqlValue": null,
+            "valueIndex": 3
+          },
+          {
+            "value": 40,
+            "label": "40%",
+            "sqlValue": null,
+            "valueIndex": 4
+          },
+          {
+            "value": 50,
+            "label": "50%",
+            "sqlValue": null,
+            "valueIndex": 5
+          },
+          {
+            "value": 60,
+            "label": "60%",
+            "sqlValue": null,
+            "valueIndex": 6
+          },
+          {
+            "value": 70,
+            "label": "70%",
+            "sqlValue": null,
+            "valueIndex": 7
+          },
+          {
+            "value": 80,
+            "label": "80%",
+            "sqlValue": null,
+            "valueIndex": 8
+          },
+          {
+            "value": 90,
+            "label": "90%",
+            "sqlValue": null,
+            "valueIndex": 9
+          },
+          {
+            "value": 100,
+            "label": "100%",
+            "sqlValue": null,
+            "valueIndex": 10
+          }
+        ],
+        "m_type": "SVAL",
+        "m_rep": "SLIDER",
+        "m_label": "Funding Progress",
+        "id": 15,
+        "m_onHoverHelp": "Specify a minimum funding level percentage desired.",
+        "m_className": "classname",
+        "m_defaultValue": [
+          {
+            "value": 0,
+            "label": "0%",
+            "sqlValue": null,
+            "valueIndex": 0
+          }
+        ]
+      },
+      "m_value": [
+        {
+          "value": 90,
+          "label": "90%",
+          "sqlValue": null,
+          "valueIndex": 9
+        }
+      ],
+      "m_visible": false,
+      "m_position": 0
+    },
+    {
+      "m_id": 10,
+      "m_metadata": {
+        "m_controlValues": [
+          {
+            "value": "All",
+            "label": "All",
+            "sqlValue": null,
+            "valueIndex": 0
+          },
+          {
+            "value": "D",
+            "label": "<span class=\"grades d-loan-grade\">D</span> 18.90%",
+            "sqlValue": null,
+            "valueIndex": 1
+          },
+          {
+            "value": "A",
+            "label": "<span class=\"grades a-loan-grade\">A</span> 7.41%",
+            "sqlValue": null,
+            "valueIndex": 2
+          },
+          {
+            "value": "E",
+            "label": "<span class=\"grades e-loan-grade\">E</span> 21.69%",
+            "sqlValue": null,
+            "valueIndex": 3
+          },
+          {
+            "value": "B",
+            "label": "<span class=\"grades b-loan-grade\">B</span> 11.46%",
+            "sqlValue": null,
+            "valueIndex": 4
+          },
+          {
+            "value": "F",
+            "label": "<span class=\"grades f-loan-grade\">F</span> 24.45%",
+            "sqlValue": null,
+            "valueIndex": 5
+          },
+          {
+            "value": "C",
+            "label": "<span class=\"grades c-loan-grade\">C</span> 15.18%",
+            "sqlValue": null,
+            "valueIndex": 6
+          },
+          {
+            "value": "G",
+            "label": "<span class=\"grades g-loan-grade\">G</span> 25.91%",
+            "sqlValue": null,
+            "valueIndex": 7
+          }
+        ],
+        "m_type": "MVAL",
+        "m_rep": "CHKBOX",
+        "m_label": "Interest Rate",
+        "id": 10,
+        "m_onHoverHelp": "Specify the interest rate ranges of the notes  you are willing to invest in.",
+        "m_className": "short",
+        "m_defaultValue": [
+          {
+            "value": "All",
+            "label": "All",
+            "sqlValue": null,
+            "valueIndex": 0
+          }
+        ]
+      },
+      "m_value": [
+        {
+          "value": "E",
+          "label": "<span class=\"grades e-loan-grade\">E</span> 21.69%",
+          "sqlValue": null,
+          "valueIndex": 3
+        },
+        {
+          "value": "D",
+          "label": "<span class=\"grades d-loan-grade\">D</span> 18.90%",
+          "sqlValue": null,
+          "valueIndex": 1
+        },
+        {
+          "value": "C",
+          "label": "<span class=\"grades c-loan-grade\">C</span> 15.18%",
+          "sqlValue": null,
+          "valueIndex": 6
+        },
+        {
+          "value": "B",
+          "label": "<span class=\"grades b-loan-grade\">B</span> 11.46%",
+          "sqlValue": null,
+          "valueIndex": 4
+        }
+      ],
+      "m_visible": false,
+      "m_position": 0
+    },
+    {
+      "m_id": 38,
+      "m_metadata": {
+        "m_controlValues": [
+          {
+            "value": true,
+            "label": "Exclude loans invested in",
+            "sqlValue": null,
+            "valueIndex": 0
+          }
+        ],
+        "m_type": "SVAL",
+        "m_rep": "CHKBOX",
+        "m_label": "Exclude Loans already invested in",
+        "id": 38,
+        "m_onHoverHelp": "Use this filter to exclude loans from a borrower that you have already invested in.",
+        "m_className": "classname",
+        "m_defaultValue": [
+          {
+            "value": true,
+            "label": "Exclude loans invested in",
+            "sqlValue": null,
+            "valueIndex": 0
+          }
+        ]
+      },
+      "m_value": [
+        {
+          "value": true,
+          "label": "Exclude loans invested in",
+          "sqlValue": null,
+          "valueIndex": 0
+        }
+      ],
+      "m_visible": false,
+      "m_position": 0
+    }
+  ]
+}

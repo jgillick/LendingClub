@@ -1,0 +1,13 @@
+{
+  "result": "success",
+  "filters": [
+    {
+      "id": 12345,
+      "name": "Filter 1"
+    },
+    {
+      "id": 23456,
+      "name": "Filter 2"
+    }
+  ]
+}

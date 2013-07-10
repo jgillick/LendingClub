@@ -222,6 +222,14 @@ class TestServerHandler(BaseHTTPRequestHandler):
                 print 'lending_match_point was not set'
                 self.write('{"error": "The lending match point was not set"}')
 
+        # Saved filters
+        elif '/browse/getSavedFiltersAj.action' == path:
+            self.output_file('getSavedFiltersAj.json')
+
+        # One saved filter
+        elif '/browse/getSavedFilterAj.action' == path and 'id' in query:
+            self.output_file('getSavedFilterAj.json')
+
         # Stage an order
         elif '/data/portfolio' == path and 'addToPortfolioNew' == query['method']:
             self.output_file('portfolio_addToPortfolioNew.json')

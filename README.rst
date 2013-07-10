@@ -21,10 +21,21 @@ The following Python libraries are required:
 * beautifulsoup4
 * html5lib
 * pybars
+* simplejson
+* collections (>2.7)
+* ordereddict (<=2.6)
 
 These can automatically be installed with `pip <http://www.pip-installer.org/en/latest/>`_::
 
-    sudo pip install requests beautifulsoup4 html5lib pybars
+    sudo pip install requests beautifulsoup4 html5lib pybars simplejson
+
+If you're running python 2.7+, also install collections::
+
+    sudo pip install collections
+
+Otherwise, install ordereddict::
+
+    sudo pip install ordereddict
 
 Install
 -------
@@ -107,10 +118,43 @@ Get a list of the loan notes that you've invested in (by default this will only 
     >>> len(notes['loans'])
     630
 
+Use a saved filter to search for loans *SEE NOTE BELOW*::
+
+
+    >>> from lendingclub import LendingClub
+    >>> from lendingclub.filters import SavedFilter
+    >>> lc = LendingClub()
+    >>> lc.authenticate()
+    Email:test@test.com
+    Password:
+    True
+    >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
+    >>> print filters                            # I've pretty printed the output here
+    [
+      {'id': 7611022, 'name': '90 Percent'},
+      {'id': 7611034, 'name': 'Only A'}
+    ]
+    >>> filter = SavedFilter(lc, 7611034)        # Load a saved filter by ID 7611034
+    >>> filter.name
+    u'Only A'
+    >>> results = lc.search(filter)              # Search for loan notes with that filter
+    >>> len(results['loans'])
+    100
+
+*NOTE* When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
+
 Pro Tips
 --------
 
-You can define some of your filters in the init line::
+Email/Password
+~~~~~~~~~~~~~~
+Set your email/password when you initialize the LendingClub class::
+
+    lc = LendingClub(email='you@your.com', password='illnevertell')
+
+Filter One-liner
+~~~~~~~~~~~~~~~~
+Define some of your filters in the init line::
 
     filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
 

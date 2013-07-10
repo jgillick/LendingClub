@@ -32,7 +32,7 @@ THE SOFTWARE.
 import re
 import os
 from bs4 import BeautifulSoup
-from lendingclub.filters import Filter, FilterByID
+from lendingclub.filters import Filter, FilterByLoanID, SavedFilter
 from lendingclub.session import Session
 
 
@@ -119,6 +119,12 @@ class LendingClub:
             folios = json_response['results']
 
         return folios
+
+    def get_saved_filters(self):
+        """
+        Return a list of all your saved filters and their IDs
+        """
+        return SavedFilter.all_filters(self)
 
     def assign_to_portfolio(self, portfolio_name, loan_id, order_id):
         """
@@ -222,7 +228,7 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, cash, min_percent=0, max_percent=25, filters=None):
+    def build_portfolio(self, cash, min_percent=0, max_percent=25, max_per_note=25, filters=None):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
         If you want to invest in these loan notes, you will have to start and order and use add_batch to
@@ -232,6 +238,7 @@ class LendingClub:
             cash -- The amount you want to invest in a portfolio
             min/max_percent -- Matches a portfolio with a average expected APR between these two numbers.
                                If there are multiple options, the one closes to the max will be chosen.
+            max_per_note -- The maximum you want to invest per note. Must be 25 or above
             filters -- (optional) The filters to use to search for notes
 
         Returns a dict representing a new portfolio or False if nothing was found.
@@ -241,10 +248,8 @@ class LendingClub:
         # Set filters
         if filters is None:
             filter_str = 'default'
-            max_per = 25
         else:
             filter_str = filters.search_string()
-            max_per = filters['max_per_note']
 
         # Start a new order
         self.session.clear_session_order()
@@ -252,7 +257,7 @@ class LendingClub:
         # Make request
         payload = {
             'amount': cash,
-            'max_per_note': max_per,
+            'max_per_note': max_per_note,
             'filter': filter_str
         }
         response = self.session.post('/portfolio/lendingMatchOptionsV2.action', data=payload)
@@ -659,7 +664,7 @@ class Order:
         for loan_id, amount in self.loans.iteritems():
 
             # You have to search before you can stage
-            f = FilterByID(loan_id)
+            f = FilterByLoanID(loan_id)
             results = self.lc.search(f)
             if len(results['loans']) == 0:
                 raise LendingClubError('Could not find a loan for ID {0}: {1}'.format(loan_id, results.text), results)
