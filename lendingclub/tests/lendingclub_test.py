@@ -42,7 +42,7 @@ class TestLendingClub(unittest.TestCase):
         self.assertEquals(portfolios[0]['portfolioName'], 'Existing Portfolio')
 
     def test_build_portfolio(self):
-        portfolio = self.lc.build_portfolio(200, 15, 16)
+        portfolio = self.lc.build_portfolio(200, 25, 15, 16)
 
         self.assertNotEqual(portfolio, False)
         self.assertEqual(portfolio['percentage'], 15.28)
@@ -59,14 +59,14 @@ class TestLendingClub(unittest.TestCase):
         # Disable session
         self.lc.session.post('/session/disabled')
 
-        portfolio = self.lc.build_portfolio(200, 15, 16)
+        portfolio = self.lc.build_portfolio(200, 25, 15, 16)
         self.assertFalse(portfolio)
 
     def test_build_portfolio_no_match(self):
         """ test_build_portfolio_no_match"
         Enter a min/max percent that cannot match dummy returned JSON
         """
-        portfolio = self.lc.build_portfolio(200, 17.6, 18.5)
+        portfolio = self.lc.build_portfolio(200, 25, 17.6, 18.5)
         self.assertFalse(portfolio)
 
     def test_search(self):

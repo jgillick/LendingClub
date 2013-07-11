@@ -211,6 +211,8 @@ class LendingClub:
             filters -- The filters to use to search for notes
             start_index -- Only 100 records will be returned at a time, so use this to start at a later index.
                             For example, to get the next 100, set start_index to 100
+
+        Returns a dictionary object with the list of matching loans under the 'loans' key.
         """
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
@@ -245,7 +247,7 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, cash, min_percent=0, max_percent=25, max_per_note=25, filters=None):
+    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
         If you want to invest in these loan notes, you will have to start and order and use add_batch to
@@ -253,14 +255,17 @@ class LendingClub:
 
         Parameters:
             cash -- The amount you want to invest in a portfolio
+            max_per_note -- The maximum dollar amount you want to invest per note. Must be 25 or above
             min/max_percent -- Matches a portfolio with a average expected APR between these two numbers.
                                If there are multiple options, the one closes to the max will be chosen.
-            max_per_note -- The maximum you want to invest per note. Must be 25 or above
             filters -- (optional) The filters to use to search for notes
+            automatically_invest -- (default False) If you want the tool to create an order and automatically
+                                    invest the portfolio that matches your filter.
 
         Returns a dict representing a new portfolio or False if nothing was found.
         """
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
+        assert max_per_note >= 25, 'max_per_note must be greater than or equal to 25'
 
         # Set filters
         if filters:
@@ -294,6 +299,7 @@ class LendingClub:
             match_index = -1
             match_option = None
             for option in options:
+
                 # A perfect match
                 if option['percentage'] == max_percent:
                     match_option = option
@@ -350,12 +356,25 @@ class LendingClub:
             if filters is not None:
                 filters.validate(fractions)
 
-            # Reset portfolio search session
-            self.session.clear_session_order()
+            # Not investing -- reset portfolio search session and return
+            if automatically_invest is False:
+                self.session.clear_session_order()
+
+            # Invest in this porfolio
+            elif automatically_invest is True: # just to be sure
+                order = self.start_order()
+
+                # This should probably only be ever done here...ever.
+                order.already_staged = True
+                order.i_know_what_im_doing = True
+
+                order.add_batch(match_option)
+                order_id = order.execute()
+                match_option['order_id'] = order_id
 
             return match_option
         else:
-            raise LendingClubError('Could not find any diversified investment options', response)
+            raise LendingClubError('Could not find any portfolio options that match your filters', response)
 
         return False
 
@@ -369,6 +388,7 @@ class LendingClub:
             per_page -- The number of notes you want returned per request
             get_all -- Return all results, instead of paged.
 
+        Returns a dictionary with a list of matching notes on the 'loans' key
         """
 
         index = start_index
@@ -452,7 +472,7 @@ class LendingClub:
             status -- The funding status string: issued, in-review, in-funding, current, charged-off, late, in-grace-period, fully-paid)
             term -- Term length, either 60 or 36 (for 5 year and 3 year, respectively)
 
-        Returns a list of matching notes
+        Returns a dictionary with a list of matching notes on the 'loans' key
         """
         assert grade is None or type(grade) is str, 'grade must be a string'
         assert portfolio_name is None or type(portfolio_name) is str, 'portfolio_name must be a string'
@@ -543,6 +563,12 @@ class Order:
     order_id = 0
     lc = None
 
+    # These two attributes should [almost] never be used. It assumes that all the loans are already staged
+    # and skips clearing and staging and goes straight to investing everything which is staged, either
+    # here or on LC.com
+    already_staged = False
+    i_know_what_im_doing = False
+
     def __init__(self, lc):
         """
         Start a new order
@@ -602,6 +628,7 @@ class Order:
 
         # Loans is an object, perhaps it's from build_portfolio and has a loan_fractions list
         if type(loans) is dict and 'loan_fractions' in loans:
+            assert 'order_id' not in loans, 'This batch of loans has already been ordered'
             loans = loans['loan_fractions']
 
         # Add each loan
@@ -672,6 +699,13 @@ class Order:
         Add all the loans to the LC order session
         """
 
+        # Skip staging...probably not a good idea...you've been warned
+        if self.already_staged is True and self.i_know_what_im_doing is True:
+            self.__log('Not staging the order...I hope you know what you\'re doing...'.format(len(self.loans)))
+            return
+
+        self.__log('Staging order for {0} loan notes...'.format(len(self.loans)))
+
         # Create a fresh order session
         self.lc.session.clear_session_order()
 
@@ -679,6 +713,7 @@ class Order:
         # Stage all the loans to the order
         #
         for loan_id, amount in self.loans.iteritems():
+            self.__log(' - staging loan {0}'.format(loan_id))
 
             # You have to search before you can stage
             f = FilterByLoanID(loan_id)
@@ -728,8 +763,8 @@ class Order:
             soup = BeautifulSoup(response.text, "html5lib")
 
             strut_tag = soup.find('input', {'name': 'struts.token'})
-            if strut_tag:
-                return strut_tag['value']
+            if strut_tag and strut_tag['value'].strip():
+                return strut_tag['value'].strip()
             else:
                 self.__log('No struts token! {0}', response.text)
                 raise LendingClubError('Could not find the struts token to place order with', response)
@@ -749,6 +784,9 @@ class Order:
         """
         order_id = 0
         response = None
+
+        if not token or token == '':
+            raise LendingClubError('The token parameter is False, None or unknown.')
 
         # Process order confirmation page
         try:
