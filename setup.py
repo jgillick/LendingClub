@@ -7,7 +7,7 @@ setup(
     author_email='none@none.com',
     packages=['lendingclub', 'lendingclub.tests'],
     package_data={
-        'lendingclub': ['VERSION'],
+        'lendingclub': ['VERSION', 'filter.handlebars'],
         'lendingclub.tests': ['assets/*.*']
     },
     url='http://github.com/jgillick/LendingClub',
