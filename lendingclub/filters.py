@@ -40,7 +40,7 @@ class Filter(dict):
     __initialized = False
     __normalizing = False
 
-    def __init__(self, max_per_note=0, filters=None):
+    def __init__(self, filters=None):
         """
         Set the default search filter values
         """
