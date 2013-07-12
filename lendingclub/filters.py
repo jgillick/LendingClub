@@ -368,6 +368,12 @@ class SavedFilter(Filter):
         else:
             raise SavedFilterError('A saved filter could not be found for ID {0}'.format(self.id), response)
 
+    def __str__(self):
+        return '<SavedFilter: {0}, \'{1}\'>'.format(self.id, self.name)
+
+    def __repr__(self):
+        return self.__str__()
+
     def __setitem__(self, key, value):
         raise SavedFilterError('A saved filter cannot be modified')
 
@@ -386,22 +392,29 @@ class SavedFilter(Filter):
     @staticmethod
     def all_filters(lc):
         """
-        Return a list of all your saved filters and their IDs
+        Get a list of all your saved filters
 
         Parameters:
             lc -- An instance of the LendingClub class
+
+        Returns a list of SavedFilter objects
         """
 
+        filters = []
         response = lc.session.get('/browse/getSavedFiltersAj.action')
         json_response = response.json()
 
+        # Load all filters
         if lc.session.json_success(json_response):
-            return json_response['filters']
+            for saved in json_response['filters']:
+                filters.append(SavedFilter(lc, saved['id']))
+
+        return filters
 
 
 class FilterByLoanID(Filter):
     """
-    Creates a filter by loan_id
+    Creates a filter by loan ID or a string of comma delimited loan IDs
     """
 
     def __init__(self, loan_id):
