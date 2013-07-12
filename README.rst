@@ -126,8 +126,8 @@ Use a saved filter to search for loans **SEE NOTE BELOW**::
     >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
     >>> print filters                            # I've pretty printed the output for you
     [
-      {'id': 7611022, 'name': '90 Percent'},
-      {'id': 7611034, 'name': 'Only A'}
+        <SavedFilter: 12345, '90 Percent'>,
+        <SavedFilter: 23456, 'Only A loans'>
     ]
     >>> filter = SavedFilter(lc, 7611034)        # Load a saved filter by ID 7611034
     >>> filter.name
