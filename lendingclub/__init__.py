@@ -123,9 +123,14 @@ class LendingClub:
             cash -= 1
         return cash
 
-    def get_portfolio_list(self):
+    def get_portfolio_list(self, names_only=False):
         """
         Return the list of portfolio names from the server
+
+        Parameters:
+            names_only -- Return a list of portfolio names, instead of portfolio objects
+
+        Returns A list of portfolios
         """
         folios = []
         response = self.session.get('/data/portfolioManagement?method=getLCPortfolios')
@@ -135,6 +140,10 @@ class LendingClub:
         if self.session.json_success(json_response):
             folios = json_response['results']
 
+            if names_only is True:
+                for i, folio in enumerate(folios):
+                    folios[i] = folio['portfolioName']
+
         return folios
 
     def get_saved_filters(self):
@@ -142,6 +151,12 @@ class LendingClub:
         Return a list of all your saved filters and their IDs
         """
         return SavedFilter.all_filters(self)
+
+    def get_saved_filter(self, filter_id):
+        """
+        Load a saved filter by ID
+        """
+        return SavedFilter(self, filter_id)
 
     def assign_to_portfolio(self, portfolio_name, loan_id, order_id):
         """
@@ -247,7 +262,7 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False):
+    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False, do_not_clear_staging=False):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
         If you want to invest in these loan notes, you will have to start and order and use add_batch to
@@ -261,6 +276,8 @@ class LendingClub:
             filters -- (optional) The filters to use to search for notes
             automatically_invest -- (default False) If you want the tool to create an order and automatically
                                     invest the portfolio that matches your filter.
+            do_not_clear_staging -- Similar to automatically_invest, don't do this unless you know what you're doing.
+                                    Setting this to True stops the method from clearing the loan staging area before returning
 
         Returns a dict representing a new portfolio or False if nothing was found.
         """
@@ -357,16 +374,17 @@ class LendingClub:
                 filters.validate(fractions)
 
             # Not investing -- reset portfolio search session and return
-            if automatically_invest is False:
-                self.session.clear_session_order()
+            if automatically_invest is not True:
+                if do_not_clear_staging is not True:
+                    self.session.clear_session_order()
 
             # Invest in this porfolio
             elif automatically_invest is True: # just to be sure
                 order = self.start_order()
 
                 # This should probably only be ever done here...ever.
-                order.already_staged = True
-                order.i_know_what_im_doing = True
+                order._Order__already_staged = True
+                order._Order__i_know_what_im_doing = True
 
                 order.add_batch(match_option)
                 order_id = order.execute()
@@ -566,8 +584,8 @@ class Order:
     # These two attributes should [almost] never be used. It assumes that all the loans are already staged
     # and skips clearing and staging and goes straight to investing everything which is staged, either
     # here or on LC.com
-    already_staged = False
-    i_know_what_im_doing = False
+    __already_staged = False
+    __i_know_what_im_doing = False
 
     def __init__(self, lc):
         """
@@ -700,7 +718,7 @@ class Order:
         """
 
         # Skip staging...probably not a good idea...you've been warned
-        if self.already_staged is True and self.i_know_what_im_doing is True:
+        if self.__already_staged is True and self.__i_know_what_im_doing is True:
             self.__log('Not staging the order...I hope you know what you\'re doing...'.format(len(self.loans)))
             return
 
