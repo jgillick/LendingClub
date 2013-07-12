@@ -218,14 +218,15 @@ class LendingClub:
 
         return False
 
-    def search(self, filters=None, start_index=0):
+    def search(self, filters=None, start_index=0, limit=100):
         """
         Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
 
         Parameters:
             filters -- The filters to use to search for notes
-            start_index -- Only 100 records will be returned at a time, so use this to start at a later index.
-                            For example, to get the next 100, set start_index to 100
+            start_index -- Only 100 records will be returned (by default) at a time, so use this to start at a
+                later index. For example, to get the next 100, set start_index to 100
+            limit -- The number of results to return per request.
 
         Returns a dictionary object with the list of matching loans under the 'loans' key.
         """
@@ -240,7 +241,7 @@ class LendingClub:
             'method': 'search',
             'filter': filter_string,
             'startindex': start_index,
-            'pagesize': 100
+            'pagesize': limit
         }
 
         # Make request
@@ -396,14 +397,14 @@ class LendingClub:
 
         return False
 
-    def my_notes(self, start_index=0, per_page=100, get_all=False, sort_by='loanId', sort_dir='asc'):
+    def my_notes(self, start_index=0, limit=100, get_all=False, sort_by='loanId', sort_dir='asc'):
         """
         Return all the loan notes you've invested in. By default it'll return 100 results at a time.
 
         Parameters
-            start_index -- The result index to start on. For example, if per_page is set to 100,
-                            to get results 200 - 300, start_index should be set to 200.
-            per_page -- The number of notes you want returned per request
+            start_index -- The result index to start on. For example, if limit is set to 50,
+                            to get results 100 - 150, start_index should be set to 100.
+            limit -- The number of notes you want returned per request
             get_all -- Return all results, instead of paged.
 
         Returns a dictionary with a list of matching notes on the 'loans' key
@@ -420,7 +421,7 @@ class LendingClub:
                 'sortBy': sort_by,
                 'dir': sort_dir,
                 'startindex': index,
-                'pagesize': per_page,
+                'pagesize': limit,
                 'namespace': '/account'
             }
             response = self.session.post('/account/loansAj.action', data=payload)
@@ -438,7 +439,7 @@ class LendingClub:
 
             # Load more
             if get_all is True and len(notes['loans']) < notes['total']:
-                index += per_page
+                index += limit
 
             # End
             else:
@@ -730,16 +731,17 @@ class Order:
         #
         # Stage all the loans to the order
         #
+        loan_ids = ','.join(self.loans.keys())
+        self.__log('Staging loans {0}'.format(loan_ids))
+
+        # You have to search for the loans before you can stage them
+        f = FilterByLoanID(loan_ids)
+        results = self.lc.search(f, limit=len(self.loans))
+        if len(results['loans']) == 0 or results['totalRecords'] != len(self.loans):
+            raise LendingClubError('Could not stage all the loans: {0}'.format(results.text), results)
+
+        # Stage all loans
         for loan_id, amount in self.loans.iteritems():
-            self.__log(' - staging loan {0}'.format(loan_id))
-
-            # You have to search before you can stage
-            f = FilterByLoanID(loan_id)
-            results = self.lc.search(f)
-            if len(results['loans']) == 0:
-                raise LendingClubError('Could not find a loan for ID {0}: {1}'.format(loan_id, results.text), results)
-
-            # Stage
             payload = {
                 'method': 'addToPortfolio',
                 'loan_id': loan_id,
