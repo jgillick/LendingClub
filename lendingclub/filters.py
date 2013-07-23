@@ -201,7 +201,7 @@ class Filter(dict):
         grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
         if 'grades' in self and self['grades']['All'] is not True:
             if grade not in self['grades']:
-                raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
+                raise FilterValidationError('Loan grade "{0}" is unknown'.format(grade), loan, 'grade')
             elif self['grades'][grade] is False:
                 raise FilterValidationError(loan=loan, criteria='grade')
 
@@ -224,13 +224,14 @@ class Filter(dict):
                 raise FilterValidationError(loan=loan, criteria='exclude loans you are invested in')
 
         # Loan purpose (either an array or single value)
-        if 'loan_purpose' in self and loan['loan_purpose'] is not False:
+        if 'loan_purpose' in self and loan['purpose'] is not False:
             purpose = self['loan_purpose']
-            if type(purpose) is not list:
-                purpose = [purpose]
+            if type(purpose) is not dict:
+                purpose = {purpose: True}
 
-            if loan['purpose'] not in purpose:
-                raise FilterValidationError(loan=loan, criteria='loan purpose')
+            if 'All' not in purpose or purpose['All'] is False:
+                if loan['purpose'] not in purpose:
+                    raise FilterValidationError(loan=loan, criteria='loan purpose')
 
         return True
 
@@ -419,8 +420,6 @@ class SavedFilter(Filter):
                     if f['m_id'] in name_map:
                         name = name_map[f['m_id']]
 
-                    print name
-
                     # Get values
                     if 'm_value' in f:
                         raw_values = f['m_value']
@@ -446,8 +445,6 @@ class SavedFilter(Filter):
                         if name == 'grades':
                             if 'All' not in value:
                                 value['All'] = False
-
-                        print value
 
                     # Add filter value
                     filter_values[name] = value

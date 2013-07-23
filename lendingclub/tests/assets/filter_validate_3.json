@@ -2,10 +2,10 @@
   "loanFractions": [
     {
       "loan_status": "INFUNDING",
-      "loanGrade": "C4",
+      "loanGrade": "A4",
       "alreadyInvestedIn": false,
       "loanFractionAmount": 25,
-      "purpose": "dummy purpose",
+      "purpose": "debt_consolidation",
       "loanLength": 60,
       "loanUnfundedAmount": 1825,
       "noFee": 0,
@@ -23,10 +23,10 @@
     },
     {
       "loan_status": "INFUNDING",
-      "loanGrade": "E4",
+      "loanGrade": "B4",
       "alreadyInvestedIn": true,
       "loanFractionAmount": 25,
-      "purpose": "dummy purpose",
+      "purpose": "car",
       "loanLength": 36,
       "loanUnfundedAmount": 4600,
       "noFee": 0,

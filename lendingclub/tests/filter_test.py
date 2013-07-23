@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import sys
 import json as pyjson
 import unittest
@@ -12,6 +13,13 @@ sys.path.insert(0, '../../')
 
 from lendingclub import LendingClub
 from lendingclub.filters import *
+
+
+def matches(regex, subject):
+    """
+    Returns True if the regex string matches the subject
+    """
+    return re.match(regex, subject) is not None
 
 
 class TestFilters(unittest.TestCase):
@@ -152,7 +160,7 @@ class TestFilterValidation(unittest.TestCase):
         self.lc.session.set_logger(None)
         self.lc.authenticate('test@test.com', 'supersecret')
 
-        response = self.lc.session.get('/filter_validation')
+        response = self.lc.session.get('/filter_validation', query={'id': 1})
         json_response = response.json()
         self.loan_list = json_response['loanFractions']
 
@@ -292,14 +300,85 @@ class TestSavedFilters(unittest.TestCase):
         filters = SavedFilter.all_filters(self.lc)
 
         self.assertEqual(len(filters), 2)
-        self.assertEqual(filters[0]['name'], 'Filter 1')
+        self.assertEqual(filters[0].name, 'Filter 1')
 
     def test_get_saved_filters(self):
-        saved = SavedFilter(self.lc, 1234)
+        saved = SavedFilter(self.lc, 1)
 
         self.assertEqual(saved.name, 'Filter 1')
-        self.assertEqual(saved.id, 1234)
+        self.assertEqual(saved.id, 1)
         self.assertNotEqual(saved.search_string(), None)
+
+    def test_validation_1(self):
+        """ test_validation_1
+        Filter 1 against filter_validation 1
+        """
+        saved = SavedFilter(self.lc, 1)
+
+        # Get loan list
+        response = self.lc.session.get('/filter_validation', query={'id': 1})
+        json_response = response.json()
+        self.loan_list = json_response['loanFractions']
+
+        # Validate, should fail on 'exclude_invested'
+        try:
+            saved.validate(self.loan_list)
+            assert False, 'Test should fail on exclude_existing'
+        except FilterValidationError as e:
+            print e.criteria
+            self.assertTrue(matches('exclude loans', e.criteria))
+
+    def test_validation_2(self):
+        """ test_validation_2
+        Filter 2 against filter_validation 2
+        """
+        saved = SavedFilter(self.lc, 2)
+
+        # Get loan list
+        response = self.lc.session.get('/filter_validation', query={'id': 2})
+        json_response = response.json()
+        self.loan_list = json_response['loanFractions']
+
+        # Validate, should fail on 'exclude_invested'
+        try:
+            saved.validate(self.loan_list)
+            assert False, 'Test should fail on loan_purpose'
+        except FilterValidationError as e:
+            print e.criteria
+            self.assertTrue(matches('loan purpose', e.criteria))
+
+    def test_validation_2_1(self):
+        """ test_validation_2_1
+        Filter 2 against filter_validation 1
+        """
+        saved = SavedFilter(self.lc, 2)
+
+        # Get loan list
+        response = self.lc.session.get('/filter_validation', query={'id': 1})
+        json_response = response.json()
+        self.loan_list = json_response['loanFractions']
+
+        # Validate, should not fail
+        saved.validate(self.loan_list)
+
+    def test_validation_2_3(self):
+        """ test_validation_3
+        Filter 2 against filter_validation 3
+        """
+        saved = SavedFilter(self.lc, 2)
+
+        # Get loan list
+        response = self.lc.session.get('/filter_validation', query={'id': 3})
+        json_response = response.json()
+        self.loan_list = json_response['loanFractions']
+
+        # Validate, should fail on 'exclude_invested'
+        try:
+            saved.validate(self.loan_list)
+            assert False, 'Test should fail on grade'
+        except FilterValidationError as e:
+            print e.criteria
+            self.assertTrue(matches('grade', e.criteria))
 
 
 if __name__ == '__main__':

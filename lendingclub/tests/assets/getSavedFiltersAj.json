@@ -2,11 +2,11 @@
   "result": "success",
   "filters": [
     {
-      "id": 12345,
+      "id": 1,
       "name": "Filter 1"
     },
     {
-      "id": 23456,
+      "id": 2,
       "name": "Filter 2"
     }
   ]

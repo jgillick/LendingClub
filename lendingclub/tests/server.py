@@ -227,8 +227,8 @@ class TestServerHandler(BaseHTTPRequestHandler):
             self.output_file('getSavedFiltersAj.json')
 
         # One saved filter
-        elif '/browse/getSavedFilterAj.action' == path and 'id' in query:
-            self.output_file('getSavedFilterAj.json')
+        elif '/browse/getSavedFilterAj.action' == path and 'id' in query and query['id'] in ['1', '2']:
+            self.output_file('getSavedFilterAj_{0}.json'.format(query['id']))
 
         # Stage an order
         elif '/data/portfolio' == path and 'addToPortfolioNew' == query['method']:
@@ -239,8 +239,8 @@ class TestServerHandler(BaseHTTPRequestHandler):
             self.output_file('portfolio_addToPortfolio.json')
 
         # Loan list for validation
-        elif '/filter_validation' == path:
-            self.output_file('filter_validate.json')
+        elif '/filter_validation' == path and 'id' in query and query['id'] in ['1', '2', '3']:
+            self.output_file('filter_validate_{0}.json'.format(query['id']))
 
         # Get a dump of the session
         elif '/session' == path:
@@ -295,7 +295,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
 
             # Custom filters
             else:
-                self.output_file('lendingMatchOptionsV2_filter.json')
+                self.output_file('lendingMatchOptionsV2_filter_1.json')
 
         # Order confirmation
         elif '/portfolio/orderConfirmed.action' == path:

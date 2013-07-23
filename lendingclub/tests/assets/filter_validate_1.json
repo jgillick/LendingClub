@@ -1,0 +1,46 @@
+{
+  "loanFractions": [
+    {
+      "loan_status": "INFUNDING",
+      "loanGrade": "C4",
+      "alreadyInvestedIn": false,
+      "loanFractionAmount": 25,
+      "purpose": "debt_consolidation",
+      "loanLength": 60,
+      "loanUnfundedAmount": 1825,
+      "noFee": 0,
+      "isWholeLoan": 0,
+      "loanFractionGUID": 98765432,
+      "title": "dummy title",
+      "uncrunch": "NONE",
+      "wholeLoanTimeRemaining": -163112762,
+      "loanType": "Personal",
+      "loanAmountRequested": 21750,
+      "loanRate": "15.88",
+      "loanTimeRemaining": 1045433238,
+      "loan_id": 12345,
+      "loanExpirationDate": "2013-07-08 17:42:28.0"
+    },
+    {
+      "loan_status": "INFUNDING",
+      "loanGrade": "E4",
+      "alreadyInvestedIn": true,
+      "loanFractionAmount": 25,
+      "purpose": "debt_consolidation",
+      "loanLength": 36,
+      "loanUnfundedAmount": 4600,
+      "noFee": 0,
+      "isWholeLoan": 0,
+      "loanFractionGUID": 98765432,
+      "title": "dummy title",
+      "uncrunch": "NONE",
+      "wholeLoanTimeRemaining": -76714762,
+      "loanType": "Personal",
+      "loanAmountRequested": 20000,
+      "loanRate": "22.20",
+      "loanTimeRemaining": 1123076238,
+      "loan_id": 23456,
+      "loanExpirationDate": "2013-07-09 15:16:31.0"
+    }
+  ]
+}
