@@ -38,7 +38,7 @@ To install, run::
 Examples
 --------
 
-Here's a step-by-step example of searching for grade B loans and investing $25 in the first one::
+A step-by-step example -- in the python interactive shell -- of searching for grade B loans and investing $25 in the first one you find::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import Filter
@@ -143,7 +143,7 @@ Pro Tips
 
 Email/Password
 ~~~~~~~~~~~~~~
-Set your email/password when you initialize the LendingClub class::
+Set your email/password when you initialize the LendingClub object::
 
     lc = LendingClub(email='you@your.com', password='illnevertell')
 
@@ -153,7 +153,6 @@ Define some of your filters in the init line::
 
     filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
 
-This will merge these values with the rest of the filters.
 
 License
 =======
