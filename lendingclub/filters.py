@@ -280,10 +280,33 @@ class SavedFilter(Filter):
     This kind of filter cannot be inspected or changed.
     """
     id = None
+    lc = None
     name = None
     json = None
     json_text = None
     response = None
+
+    @staticmethod
+    def all_filters(lc):
+        """
+        Get a list of all your saved filters
+
+        Parameters:
+            lc -- An instance of the LendingClub class
+
+        Returns a list of SavedFilter objects
+        """
+
+        filters = []
+        response = lc.session.get('/browse/getSavedFiltersAj.action')
+        json_response = response.json()
+
+        # Load all filters
+        if lc.session.json_success(json_response):
+            for saved in json_response['filters']:
+                filters.append(SavedFilter(lc, saved['id']))
+
+        return filters
 
     def __init__(self, lc, filter_id):
         """
@@ -295,16 +318,29 @@ class SavedFilter(Filter):
         """
 
         self.id = filter_id
+        self.lc = lc
+        self.load()
+
+    def reload(self):
+        """
+        Reload the saved filter
+        """
+        self.load()
+
+    def load(self):
+        """
+        Load the filter from the server
+        """
 
         # Attempt to load the saved filter
         payload = {
             'id': self.id
         }
-        response = lc.session.get('/browse/getSavedFilterAj.action', query=payload)
+        response = self.lc.session.get('/browse/getSavedFilterAj.action', query=payload)
         self.response = response
         json_response = response.json()
 
-        if lc.session.json_success(json_response):
+        if self.lc.session.json_success(json_response):
             self.name = json_response['filterName']
 
             #
@@ -457,28 +493,6 @@ class SavedFilter(Filter):
 
     def search_string(self):
         return self.json_text
-
-    @staticmethod
-    def all_filters(lc):
-        """
-        Get a list of all your saved filters
-
-        Parameters:
-            lc -- An instance of the LendingClub class
-
-        Returns a list of SavedFilter objects
-        """
-
-        filters = []
-        response = lc.session.get('/browse/getSavedFiltersAj.action')
-        json_response = response.json()
-
-        # Load all filters
-        if lc.session.json_success(json_response):
-            for saved in json_response['filters']:
-                filters.append(SavedFilter(lc, saved['id']))
-
-        return filters
 
 
 class FilterByLoanID(Filter):
