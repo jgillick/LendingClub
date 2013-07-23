@@ -181,41 +181,56 @@ class Filter(dict):
         """
         assert type(loan) is dict, 'loan parameter must be a dictionary object'
 
-        # Check required keys for a loan
+        # Map the loan value keys to the filter keys
         req = {
             'loan_id': None,
             'loanGrade': 'grade',
             'loanLength': 'term',
             'loanUnfundedAmount': 'progress',
             'loanAmountRequested': 'progress',
-            'alreadyInvestedIn': 'exclude_existing'
+            'alreadyInvestedIn': 'exclude_existing',
+            'purpose': 'loan_purpose',
         }
+
+        # Throw an error if the loan does not contain one of the criteria keys that this filter has
         for key, criteria in req.iteritems():
-            if key not in loan:
+            if criteria in self and key not in loan:
                 raise FilterValidationError('Loan does not have a "{0}" value.'.format(key), loan, criteria)
 
         # Grade
         grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
-        if self['grades']['All'] is not True:
+        if 'grades' in self and self['grades']['All'] is not True:
             if grade not in self['grades']:
                 raise FilterValidationError('Loan grade "{0}" is unknown'.filter(grade), loan, 'grade')
             elif self['grades'][grade] is False:
                 raise FilterValidationError(loan=loan, criteria='grade')
 
         # Term
-        if loan['loanLength'] == 36 and self['term']['Year3'] is False:
-            raise FilterValidationError(loan=loan, criteria='term')
-        elif loan['loanLength'] == 60 and self['term']['Year5'] is False:
-            raise FilterValidationError(loan=loan, criteria='term')
+        if 'term' in self:
+            if loan['loanLength'] == 36 and self['term']['Year3'] is False:
+                raise FilterValidationError(loan=loan, criteria='loan term')
+            elif loan['loanLength'] == 60 and self['term']['Year5'] is False:
+                raise FilterValidationError(loan=loan, criteria='loan term')
 
         # Progress
-        loan_progress = (1 - (loan['loanUnfundedAmount'] / loan['loanAmountRequested'])) * 100
-        if self['funding_progress'] > loan_progress:
-            raise FilterValidationError(loan=loan, criteria='funding_progress')
+        if 'funding_progress' in self:
+            loan_progress = (1 - (loan['loanUnfundedAmount'] / loan['loanAmountRequested'])) * 100
+            if self['funding_progress'] > loan_progress:
+                raise FilterValidationError(loan=loan, criteria='funding progress')
 
         # Exclude existing
-        if self['exclude_existing'] is True and loan['alreadyInvestedIn'] is True:
-            raise FilterValidationError(loan=loan, criteria='alreadyInvestedIn')
+        if 'exclude_existing' in self:
+            if self['exclude_existing'] is True and loan['alreadyInvestedIn'] is True:
+                raise FilterValidationError(loan=loan, criteria='exclude loans you are invested in')
+
+        # Loan purpose (either an array or single value)
+        if 'loan_purpose' in self and loan['loan_purpose'] is not False:
+            purpose = self['loan_purpose']
+            if type(purpose) is not list:
+                purpose = [purpose]
+
+            if loan['purpose'] not in purpose:
+                raise FilterValidationError(loan=loan, criteria='loan purpose')
 
         return True
 
@@ -266,6 +281,7 @@ class SavedFilter(Filter):
     id = None
     name = None
     json = None
+    json_text = None
     response = None
 
     def __init__(self, lc, filter_id):
@@ -355,15 +371,13 @@ class SavedFilter(Filter):
                 assert type(json_test) is list, 'Expecting a list, instead received a {0}'.format(type(json_test))
                 assert 'm_id' in json_test[0], 'Expecting a \'m_id\' property in each filter'
                 assert 'm_value' in json_test[0], 'Expecting a \'m_value\' property in each filter'
+
+                self.json = json_test
             except Exception as e:
                 raise SavedFilterError('Could not parse filter from the JSON response: {0}'.format(str(e)))
 
-            self.json = json_text
-
-            # Now things get tricky, we have to retain the order of everything in the JSON otherwise the
-            # search will do a wildcard search *sigh*
-            # ordered_json = simplejson.loads(response.text, object_pairs_hook=OrderedDict)
-            # self.json = simplejson.dumps(ordered_json['filter'], separators=(',', ':'))
+            self.json_text = json_text
+            self.analyze()
 
         else:
             raise SavedFilterError('A saved filter could not be found for ID {0}'.format(self.id), response)
@@ -377,17 +391,75 @@ class SavedFilter(Filter):
     def __setitem__(self, key, value):
         raise SavedFilterError('A saved filter cannot be modified')
 
+    def analyze(self):
+        """
+        Analyze the filter JSON and attempt to parse out the individual filters.
+        """
+        filter_values = {}
+
+        # ID to filter name mapping
+        name_map = {
+            10: 'grades',
+            11: 'loan_purpose',
+            13: 'approved',
+            15: 'funding_progress',
+            38: 'exclude_existing',
+            39: 'term',
+            43: 'keyword'
+        }
+
+        if self.json is not None:
+            filters = self.json
+
+            for f in filters:
+                if 'm_id' in f:
+                    name = f['m_id']
+
+                    # Get the name to represent this filter
+                    if f['m_id'] in name_map:
+                        name = name_map[f['m_id']]
+
+                    print name
+
+                    # Get values
+                    if 'm_value' in f:
+                        raw_values = f['m_value']
+                        value = {}
+
+                        # Loop through multiple values
+                        if type(raw_values) is list:
+
+                            # A single non string value, is THE value
+                            if len(raw_values) == 1 and type(raw_values[0]['value']) not in [str, unicode]:
+                                value = raw_values[0]['value']
+
+                            # Create a dict of values: name = True
+                            for val in raw_values:
+                                if type(val['value']) in [str, unicode]:
+                                    value[val['value']] = True
+
+                        # A single value
+                        else:
+                            value = raw_values
+
+                        # Normalize grades array
+                        if name == 'grades':
+                            if 'All' not in value:
+                                value['All'] = False
+
+                        print value
+
+                    # Add filter value
+                    filter_values[name] = value
+                    dict.__setitem__(self, name, value)
+
+        return filter_values
+
     def __normalize():
         pass
 
-    def validate(self, results):
-        return True
-
-    def validate_one(self, loan):
-        return True
-
     def search_string(self):
-        return self.json
+        return self.json_text
 
     @staticmethod
     def all_filters(lc):
