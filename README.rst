@@ -1,11 +1,7 @@
 Lending Club API
 ================
 
-A stand-alone python API for Lending Club. In a nutshell, this module lets you check your cash balance, search for notes, build orders and invest.
-
-It is still a work in progress but I expect the first stable release by the end of July. The current release works well but may have some bugs -- use at your own risk.
-
-The code has been ported out of the `LendingClub Auto Investor <https://github.com/jgillick/LendingClubAutoInvestor>`_ project.
+A stand-alone python API for Lending Club. In a nutshell, this module lets you check your cash balance, search for notes, build orders, invest and more.
 
 Disclaimer
 ----------
