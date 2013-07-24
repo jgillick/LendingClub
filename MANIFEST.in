@@ -1,2 +1,2 @@
-include *.txt *.rst *.html *.json
-recursive-include docs *.txt *.rst *.html *.json
+include *.txt *.rst *.html *.json *.handlebars VERSION
+recursive-include lendingclub *.txt *.rst *.html *.json *.handlebars VERSION
