@@ -284,7 +284,10 @@ class TestServerHandler(BaseHTTPRequestHandler):
 
         # Search
         elif '/browse/browseNotesAj.action' == path and 'method' in data and data['method'] == 'search':
-            self.output_file('browseNotesAj.json')
+            ver = '1'
+            if 'browseNotesAj' in http_session:
+                ver = http_session['browseNotesAj']
+            self.output_file('browseNotesAj_{0}.json'.format(ver))
 
         # Investment option search
         elif '/portfolio/lendingMatchOptionsV2.action' == path:
@@ -344,7 +347,7 @@ class TestServerHandler(BaseHTTPRequestHandler):
             if session_disabled is True:
                 self.write('{"error": "Session disabled"}')
             else:
-                for key, values in data.iteritems():
+                for key, value in data.iteritems():
                     self.add_session(key, value)
                 self.send_headers(302, {'location': '/session'})
 

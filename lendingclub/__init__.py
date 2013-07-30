@@ -364,11 +364,10 @@ class LendingClub:
                 for frac in fractions:
                     frac['invest_amount'] = frac['loanFractionAmount']
 
-            if len(fractions) > 0:
-                match_option['loan_fractions'] = fractions
-            else:
-                self.__log('Couldn\'t load the loan fractions for the selected portfolio')
+            if len(fractions) == 0:
+                self.__log('The selected portfolio didn\'t have any loans')
                 return False
+            match_option['loan_fractions'] = fractions
 
             # Validate that fractions do indeed match the filters
             if filters is not None:
@@ -387,7 +386,7 @@ class LendingClub:
                 order._Order__already_staged = True
                 order._Order__i_know_what_im_doing = True
 
-                order.add_batch(match_option)
+                order.add_batch(match_option['loan_fractions'])
                 order_id = order.execute()
                 match_option['order_id'] = order_id
 
@@ -596,6 +595,11 @@ class Order:
             lc -- The LendingClub API object
         """
         self.lc = lc
+        self.loans = {}
+        self.order_id = 0
+
+        self.__already_staged = False
+        self.__i_know_what_im_doing = False
 
     def __log(self, msg):
         self.lc._LendingClub__log(msg)
@@ -618,8 +622,7 @@ class Order:
             assert 'loan_id' in loan and type(loan['loan_id']) is int, 'loan_id must be a number or dictionary containing a loan_id value'
             loan_id = loan['loan_id']
 
-        assert type(loan_id) is int, 'loan_id must be a number'
-
+        assert type(loan_id) in [str, unicode, int], 'Loan ID must be an integer number or a string'
         self.loans[loan_id] = amount
 
     def update(self, loan_id, amount):
@@ -634,29 +637,49 @@ class Order:
 
     def add_batch(self, loans, batch_amount=None):
         """
-        Add a batch of loans to your order. Each loan in the list must be a dictionary
-        object with at least a 'loan_id' and a 'invest_amount' value. The invest_amount
-        value is the dollar amount you wish to invest in this loan.
+        Add a batch of loans to your order.
+
+        Each item in the list can either be a loan ID OR a dictionary object containing
+        a loan_id and invest_amount. The invest_amount value is the dollar amount you wish to invest in this loan.
+
+        Example 1:
+            # Invest $50 in 3 loans
+            order.add_batch([1234, 2345, 3456], 50)
+
+        Example 2:
+            # Invest different amounts in each loans
+            order.add_batch([
+                {'loan_id': 1234, invest_amount: 50},
+                {'loan_id': 2345, invest_amount: 25},
+                {'loan_id': 3456, invest_amount: 150}
+            ])
 
         Parameters:
             loans -- A list of dictionary objects representing each loan and the amount you want to invest in it.
             batch_amount -- The dollar amount you want to set on ALL loans in this batch.
-                            NOTE: This will override the invest_amount value for each loan.
+                            **NOTE:** This will override the invest_amount value for each loan.
         """
         assert batch_amount is None or batch_amount % 25 == 0, 'batch_amount must be a multiple of 25'
-
-        # Loans is an object, perhaps it's from build_portfolio and has a loan_fractions list
-        if type(loans) is dict and 'loan_fractions' in loans:
-            assert 'order_id' not in loans, 'This batch of loans has already been ordered'
-            loans = loans['loan_fractions']
 
         # Add each loan
         assert type(loans) is list, 'The loans property must be a list'
         for loan in loans:
-            amount = batch_amount if batch_amount else loan['invest_amount']
+            loan_id = loan
+            amount = batch_amount
 
-            assert amount % 25 == 0, 'Loan invest_amount must be a multiple of 25'
-            self.add(loan['loan_id'], amount)
+            # Extract ID and amount from loan dict
+            if type(loan) is dict:
+                assert 'loan_id' in loan, 'Each loan dict must have a loan_id value'
+                assert batch_amount or 'invest_amount' in loan, 'Could not determine how much to invest in loan {0}'.format(loan['loan_id'])
+
+                loan_id = loan['loan_id']
+                if amount is None and 'invest_amount' in loan:
+                    amount = loan['invest_amount']
+
+            assert amount is not None, 'Could not determine how much to invest in loan {0}'.format(loan_id)
+            assert amount % 25 == 0, 'Amount to invest must be a multiple of 25 (loan_id: {0})'.format(loan_id)
+
+            self.add(loan_id, amount)
 
     def remove(self, loan_id):
         """
@@ -667,6 +690,12 @@ class Order:
         """
         if loan_id in self.loans:
             del self.loans[loan_id]
+
+    def remove_all(self):
+        """
+        Remove all loans
+        """
+        self.loans = {}
 
     def execute(self, portfolio_name=None):
         """
@@ -731,14 +760,15 @@ class Order:
         #
         # Stage all the loans to the order
         #
-        loan_ids = ','.join(self.loans.keys())
+        loan_ids = map(str, self.loans.keys())
+        loan_ids = ','.join(loan_ids)
         self.__log('Staging loans {0}'.format(loan_ids))
 
-        # You have to search for the loans before you can stage them
+        # LendingClub requires you to search for the loans before you can stage them
         f = FilterByLoanID(loan_ids)
         results = self.lc.search(f, limit=len(self.loans))
         if len(results['loans']) == 0 or results['totalRecords'] != len(self.loans):
-            raise LendingClubError('Could not stage all the loans: {0}'.format(results.text), results)
+            raise LendingClubError('Could not stage the loans. The number of loans in your batch does not match totalRecords. {0} != {1}'.format(len(self.loans), results['totalRecords']), results)
 
         # Stage all loans
         for loan_id, amount in self.loans.iteritems():

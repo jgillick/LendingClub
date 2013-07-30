@@ -157,6 +157,8 @@ print '\n\nEnter a valid LendingClub account information...'
 email = raw_input('Email:')
 password = getpass.getpass()
 
+
+assert lc.is_site_available(), 'No network connection or cannot access lendingclub.com'
 assert lc.authenticate(email, password), 'Could not authenticate'
 assert lc.get_investable_balance(), 'You do not have at least $25 in your account.'
 

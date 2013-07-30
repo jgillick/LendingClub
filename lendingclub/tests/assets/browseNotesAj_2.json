@@ -1,0 +1,38 @@
+{
+  "result": "success",
+  "searchresult": {
+    "loans": [
+      {
+        "loanGrade": "D5",
+        "purpose": "debt_consolidation",
+        "loanAmtRemaining": 1600,
+        "loanUnfundedAmount": 1550,
+        "noFee": 0,
+        "primeTotalInvestment": 0,
+        "title": "Dummy title",
+        "isInCurrentOrder": false,
+        "alreadySelected": false,
+        "primeFractions": 0,
+        "fico": "685-689",
+        "wholeLoanTimeRemaining": -718428816,
+        "loanType": "Personal",
+        "hasCosigner": false,
+        "amountToInvest": 0,
+        "primeUnfundedAmount": 0,
+        "loan_status": "INFUNDING",
+        "alreadyInvestedIn": false,
+        "loanLength": 36,
+        "searchrank": -0.007165518,
+        "loanRateDiff": ".00",
+        "loanGUID": "123",
+        "isWholeLoan": 0,
+        "loanAmt": 14000,
+        "loanAmountRequested": 14000,
+        "primeMarkedInvestment": 0,
+        "loanRate": "20.31",
+        "loanTimeRemaining": 435453184
+      }
+    ],
+    "totalRecords": 1
+  }
+}
