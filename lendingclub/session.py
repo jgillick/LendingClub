@@ -193,7 +193,7 @@ class Session:
         This is also a simple test to see if there's a network connection
         """
         try:
-            response = self.head('/')
+            response = requests.head(self.base_url)
             status = response.status_code
             return 200 <= status < 400  # Returns true if the status code is greater than 200 and less than 400
         except Exception:
