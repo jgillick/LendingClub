@@ -1,3 +1,12 @@
+v0.1.1 -- 2013-07-29
+  * Batch order bug fixes
+    + Fix bugs with staging orders. List of IDs had to be converted to strings before joining (https://github.com/jgillick/LendingClub/issues/1)
+    + Add support for passing a list of IDs to batch_add, instead of list of dicts
+    + Add loan_id validation to Filter and FilterByLoanID
+    + More type checking and assertions
+    + More unittests
+    + More examples in README
+
 v0.1
   * Bug fixes
   * Added SavedFilters

@@ -33,8 +33,11 @@ To install, run::
 
 Examples
 --------
+Here are a few examples, in the python interactive shell, of using the Lending Club API module.
 
-A step-by-step example -- in the python interactive shell -- of searching for grade B loans and investing $25 in the first one you find::
+Simple Search and Order
+~~~~~~~~~~~~~~~~~~~~~~~
+Searching for grade B loans and investing $25 in the first one you find::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import Filter
@@ -59,7 +62,9 @@ A step-by-step example -- in the python interactive shell -- of searching for gr
     >>> order.assign_to_portfolio('Foo')   # Assign the loans in this order to a portfolio called 'Foo'
     True
 
-Create a diversified portfolio of loan notes. Here we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return between 17% - 19%::
+Invest in a Portfolio of Loans
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Here we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return between 17% - 19%. This similar to finding a portfolio in the 'Invest' section on lendingclub.com::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import Filter
@@ -89,7 +94,9 @@ Create a diversified portfolio of loan notes. Here we want to invest $400 in a p
     >>> order.execute()                   # Execute the order
     1861880
 
-Get a list of the loan notes that you've invested in (by default this will only return 100 at a time)::
+Your Loan Notes
+~~~~~~~~~~~~~~~
+Get a list of the loan notes that you have **already** invested in (by default this will only return 100 at a time)::
 
     >>> from lendingclub import LendingClub
     >>> lc = LendingClub()
@@ -109,8 +116,9 @@ Get a list of the loan notes that you've invested in (by default this will only 
     >>> len(notes['loans'])
     630
 
-Use a saved filter to search for loans **SEE NOTE BELOW**::
-
+Using Saved Filters
+~~~~~~~~~~~~~~~~~~~
+Use a filter saved on lendingclub.com to search for loans **SEE NOTE BELOW**::
 
     >>> from lendingclub import LendingClub
     >>> from lendingclub.filters import SavedFilter
@@ -133,6 +141,23 @@ Use a saved filter to search for loans **SEE NOTE BELOW**::
     100
 
 **NOTE:** When using saved search filters you should always confirm that the returned results match your filters. This is because LendingClub's search API is not very forgiving. When we get the saved filter from the server and then send it to the search API, if any part of it has been altered or becomes corrupt, LendingClub will do a wildcard search instead of using the filter. The code in this python module takes great care to keep the filter pristine and check for inconsistencies, but that's no substitute for the individual investor's diligence.
+
+Batch Investing
+~~~~~~~~~~~~~~~
+Invest in a list of loans in one action::
+
+    >>> from lendingclub import LendingClub
+    >>> lc = LendingClub()
+    >>> lc.authenticate()
+    Email:test@test.com
+    Password:
+    True
+    >>> loans = [1234, 2345, 3456]       # Create a list of loan IDs
+    >>> order = lc.start_order()          # Start a new order
+    >>> order.add_batch(loans, 25)        # Invest $25 in each loan
+    >>> order.execute()                   # Execute the order
+    1861880
+
 
 Pro Tips
 --------
