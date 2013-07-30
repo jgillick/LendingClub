@@ -183,7 +183,7 @@ class Filter(dict):
 
         # Map the loan value keys to the filter keys
         req = {
-            'loan_id': None,
+            'loanGUID': 'loan_id',
             'loanGrade': 'grade',
             'loanLength': 'term',
             'loanUnfundedAmount': 'progress',
@@ -196,6 +196,12 @@ class Filter(dict):
         for key, criteria in req.iteritems():
             if criteria in self and key not in loan:
                 raise FilterValidationError('Loan does not have a "{0}" value.'.format(key), loan, criteria)
+
+        # Loan ID
+        if 'loan_id' in self:
+            loan_ids = str(self['loan_id']).split(',')
+            if str(loan['loanGUID']) not in loan_ids:
+                raise FilterValidationError('Did not meet filter criteria for loan ID. {0} does not match {1}'.format(loan['loanGUID'], self['loan_id']), loan=loan, criteria='loan ID')
 
         # Grade
         grade = loan['loanGrade'][0]  # Extract the letter portion of the loan
@@ -504,12 +510,6 @@ class FilterByLoanID(Filter):
         self['loan_id'] = loan_id
         this_path = os.path.dirname(os.path.realpath(__file__))
         self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
-
-    def validate(self, results):
-        return True
-
-    def validate_one(self, loan):
-        return True
 
     def __normalize():
         pass
