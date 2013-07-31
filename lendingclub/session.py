@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 """
-Manage the LendingClub user session and all HTTP calls to the LendingClub site.
+Manage the LendingClub user session and all raw HTTP calls to the LendingClub site.
+This will almost always be accessed through the API calls in
+:class:`lendingclub.LendingClub` instead of directly.
 """
 
 """
@@ -49,7 +51,7 @@ class Session:
     The session will attempt to reauth before the next HTTP call after timeout."""
 
     base_url = 'https://www.lendingclub.com/'
-    """ The root LendingClub URL """
+    """ The root URL that all paths are appended to """
 
     last_request_time = 0
     """ The timestamp of the last HTTP request """
@@ -86,14 +88,24 @@ class Session:
         """
         Have the Session class send debug logging to your python logging logger.
         Set to None stop the logging.
+
+        Parameters
+        ----------
+        logger : `Logger <http://docs.python.org/2/library/logging.html>`_
+            The logger to send debug output to.
         """
         self.__logger = logger
 
-    def build_url(self, relative_path):
+    def build_url(self, path):
         """
-        Build a LendingClub URL by joining the base_url to the relative_path and removing any double slashes
+        Build a LendingClub URL from a URL path (without the domain).
+
+        Parameters
+        ----------
+        path : string
+            The path part of the URL after the domain. i.e. https://www.lendingclub.com/<path>
         """
-        url = '{0}{1}'.format(self.base_url, relative_path)
+        url = '{0}{1}'.format(self.base_url, path)
         url = re.sub('([^:])//', '\\1/', url)  # Remove double slashes
         return url
 
@@ -102,11 +114,27 @@ class Session:
         Authenticate with LendingClub and preserve the user session for future requests.
         This will raise an exception if the login appears to have failed, otherwise it returns True.
 
-        The problem is that LendingClub doesn't seem to have a login API that we can access directly,
-        so the code has to try to decide if the login worked or not by looking at the URL redirect and
-        parsing the returned HTML for errors.
+        Since Lending Club doesn't seem to have a login API, the code has to try to decide if the login
+        worked or not by looking at the URL redirect and parsing the returned HTML for errors.
 
-        Returns True or throws an exception (NetworkError or AuthenticationError)
+        Parameters
+        ----------
+        email : string
+            The email of a user on Lending Club
+        password : string
+            The user's password, for authentication.
+
+        Returns
+        -------
+        boolean
+            True on success or throws an exception on failure.
+
+        Raises
+        ------
+        session.AuthenticationError
+            If authentication failed
+        session.NetworkError
+            If a network error occurred
         """
 
         # Get email and password
@@ -191,6 +219,11 @@ class Session:
         """
         Returns true if we can access LendingClub.com
         This is also a simple test to see if there's a network connection
+
+        Returns
+        -------
+        boolean
+            True or False
         """
         try:
             response = requests.head(self.base_url)
@@ -203,14 +236,23 @@ class Session:
         """
         Sends HTTP request to LendingClub.
 
-        Parameters:
-            method -- The HTTP method to use: GET, POST or HEAD
-            path -- The relative path that will be appended to http://lendingclub.com
-            query -- A dictionary of query string parameters
-            data -- A dictionary of POST data
-            redirects -- Boolean: True to follow redirects
+        Parameters
+        ----------
+        method : {GET, POST, HEAD, DELETE}
+            The HTTP method to use: GET, POST, HEAD or DELETE
+        path : string
+            The path that will be appended to the domain defined in :attr:`base_url`.
+        query : dict
+            A dictionary of query string parameters
+        data : dict
+            A dictionary of POST data values
+        redirects : boolean
+            True to follow redirects, False to return the original response from the server.
 
-        Returns a python-requests request object (http://docs.python-requests.org/en/latest/)
+        Returns
+        -------
+        requests.Response
+            A `requests.Response <http://docs.python-requests.org/en/latest/api/#requests.Response>`_ object
         """
 
         # Check session time
@@ -247,19 +289,19 @@ class Session:
 
     def post(self, path, query=None, data=None, redirects=False):
         """
-        POST request wrapper for request()
+        POST request wrapper for :func:`request()`
         """
         return self.request('POST', path, query, data, redirects)
 
     def get(self, path, query=None, redirects=False):
         """
-        GET request wrapper for request()
+        GET request wrapper for :func:`request()`
         """
         return self.request('GET', path, query, None, redirects)
 
     def head(self, path, query=None, data=None, redirects=False):
         """
-        HEAD request wrapper for request()
+        HEAD request wrapper for :func:`request()`
         """
         return self.request('HEAD', path, query, None, redirects)
 
@@ -271,10 +313,12 @@ class Session:
 
     def json_success(self, json):
         """
-        Check a JSON response object for the success flag
+        Check the JSON response object for the success flag
 
-        Parameters:
-            json -- A JSON response dictionary from LendingClub
+        Parameters
+        ----------
+        json : dict
+            A dictionary representing a JSON object from lendingclub.com
         """
         if type(json) is dict and 'result' in json and json['result'] == 'success':
             return True
@@ -283,11 +327,14 @@ class Session:
 
 class SessionError(Exception):
     """
-    Base Session exception class
+    Base exception class for :mod:`lendingclub.session`
 
-    Attributes:
-        value -- The error message
-        origin -- The original exception, if this exception was caused by another.
+    Parameters
+    ----------
+    value : string
+        The error message
+    origin : Exception
+        The original exception, if this exception was caused by another.
     """
     value = 'Unknown error'
     origin = None

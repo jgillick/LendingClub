@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
 """
-An API for LendingClub.com that let's you access your account, search for notes
-and invest.
+The stand-alone python module for interacting with your Lending Club account.
 """
 
 """
@@ -37,8 +36,42 @@ from lendingclub.session import Session
 
 
 class LendingClub:
+    """
+    The main entry point for interacting with Lending Club.
+
+    Parameters
+    ----------
+    email : string
+        The email of a user on Lending Club
+    password : string
+        The user's password, for authentication.
+    logger : `Logger <http://docs.python.org/2/library/logging.html>`_
+        A python logger used to get debugging output from this module.
+
+    Examples
+    --------
+
+    Get the cash balance in your lending club account:
+
+        >>> from lendingclub import LendingClub
+        >>> lc = LendingClub()
+        >>> lc.authenticate()         # Authenticate with your lending club credentials
+        Email:test@test.com
+        Password:
+        True
+        >>> lc.get_cash_balance()     # See the cash you have available for investing
+        463.80000000000001
+
+    You can also enter your email and password when you instantiate the LendingClub class, in one line:
+
+        >>> from lendingclub import LendingClub
+        >>> lc = LendingClub(email='test@test.com', password='secret123')
+        >>> lc.authenticate()
+        True
+    """
+
     __logger = None
-    session = Session()
+    session = None
     order = None
 
     def __init__(self, email=None, password=None, logger=None):
@@ -58,6 +91,11 @@ class LendingClub:
     def set_logger(self, logger):
         """
         Set a logger to send debug messages to
+
+        Parameters
+        ----------
+        logger : `Logger <http://docs.python.org/2/library/logging.html>`_
+            A python logger used to get debugging output from this module.
         """
         self.__logger = logger
         self.session.set_logger(self.__logger)
@@ -65,6 +103,11 @@ class LendingClub:
     def version(self):
         """
         Return the version number of the Lending Club Investor tool
+
+        Returns
+        -------
+        string
+            The version number string
         """
         this_path = os.path.dirname(os.path.realpath(__file__))
         version_file = os.path.join(this_path, 'VERSION')
@@ -73,7 +116,25 @@ class LendingClub:
     def authenticate(self, email=None, password=None):
         """
         Attempt to authenticate the user.
-        Returns True or raises an exception
+
+        Parameters
+        ----------
+        email : string
+            The email of a user on Lending Club
+        password : string
+            The user's password, for authentication.
+
+        Returns
+        -------
+        boolean
+            True if the user authenticated or raises an exception if not
+
+        Raises
+        ------
+        session.AuthenticationError
+            If authentication failed
+        session.NetworkError
+            If a network error occurred
         """
         if self.session.authenticate(email, password):
             return True
@@ -82,12 +143,21 @@ class LendingClub:
         """
         Returns true if we can access LendingClub.com
         This is also a simple test to see if there's an internet connection
+
+        Returns
+        -------
+        boolean
         """
         return self.session.is_site_available()
 
     def get_cash_balance(self):
         """
-        Returns the account cash balance available for investing or False
+        Returns the account cash balance available for investing
+
+        Returns
+        -------
+        float
+            The cash balance in your account.
         """
         cash = False
         try:
@@ -110,13 +180,19 @@ class LendingClub:
 
         except Exception as e:
             self.__log('Could not get the cash balance on the account: Error: {0}\nJSON: {1}'.format(str(e), response.text))
+            raise e
 
         return cash
 
     def get_investable_balance(self):
         """
-        Returns the amount of money you have to invest.
+        Returns the amount of money from your account that you can invest.
         Loans are multiples of $25, so this is your total cash balance, adjusted to be a multiple of 25.
+
+        Returns
+        -------
+        int
+            The amount of cash you can invest
         """
         cash = int(self.get_cash_balance())
         while cash % 25 != 0:
@@ -125,12 +201,17 @@ class LendingClub:
 
     def get_portfolio_list(self, names_only=False):
         """
-        Return the list of portfolio names from the server
+        Get your list of named portfolios from the lendingclub.com
 
-        Parameters:
-            names_only -- Return a list of portfolio names, instead of portfolio objects
+        Parameters
+        ----------
+        names_only : boolean, optional
+            If set to True, the function will return a list of portfolio names, instead of portfolio objects
 
-        Returns A list of portfolios
+        Returns
+        -------
+        list
+            A list of portfolios (or names, if `names_only` is True)
         """
         folios = []
         response = self.session.get('/data/portfolioManagement?method=getLCPortfolios')
@@ -148,29 +229,51 @@ class LendingClub:
 
     def get_saved_filters(self):
         """
-        Return a list of all your saved filters and their IDs
+        Get a list of all the saved search filters you've created on lendingclub.com
+
+        Returns
+        -------
+        list
+            List of :class:`lendingclub.filters.SavedFilter` objects
         """
         return SavedFilter.all_filters(self)
 
     def get_saved_filter(self, filter_id):
         """
-        Load a saved filter by ID
+        Load a single saved search filter from the site by ID
+
+        Parameters
+        ----------
+        filter_id : int
+            The ID of the saved filter
+
+        Returns
+        -------
+        SavedFilter
+            A :class:`lendingclub.filters.SavedFilter` object or False
         """
         return SavedFilter(self, filter_id)
 
     def assign_to_portfolio(self, portfolio_name, loan_id, order_id):
         """
-        Assign a note to a named portfolio. loan_id and order_id can be either
-        integer values or lists. If choosing lists, they both should be the same length
-        and match up. For example, order_id[5] must be the order_id for loan_id[5]
+        Assign a note to a named portfolio. `loan_id` and `order_id` can be either
+        integer values or lists. If choosing lists, they both **MUST** be the same length
+        and line up. For example, `order_id[5]` must be the order ID for `loan_id[5]`
 
-        Parameters:
-            portfolio_name -- The name of the portfolio to assign it to (new or existing)
-            loan_id -- The ID (or list of IDs) of the note to assign to a portfolio
-            order_id -- The ID (or list of IDs) of the order this loan note was invested with.
-                        You can find this in the dict returned from get_note()
+        Parameters
+        ----------
+        portfolio_name : string
+            The name of the portfolio to assign a the loan note to -- new or existing
+        loan_id : int or list
+            The loan ID, or list of loan IDs, to assign to the portfolio
+        order_id : int or list
+            The order ID, or list of order IDs, that this loan note was invested with.
+            You can find this in the dict returned from `get_note()`
 
-        Returns True on success
+        Returns
+        -------
+        boolean
+            True on success
         """
         response = None
 
@@ -220,15 +323,25 @@ class LendingClub:
 
     def search(self, filters=None, start_index=0, limit=100):
         """
-        Sends the filters to the Browse Notes API and returns a list of the notes found or False on error.
+        Search for a list of notes that can be invested in.
+        (similar to searching for notes in the Browse section on the site)
 
-        Parameters:
-            filters -- The filters to use to search for notes
-            start_index -- Only 100 records will be returned (by default) at a time, so use this to start at a
-                later index. For example, to get the next 100, set start_index to 100
-            limit -- The number of results to return per request.
+        Parameters
+        ----------
+        filters : lendingclub.filters.*, optional
+            The filter to use to search for notes. If no filter is passed, a wildcard search
+            will be performed.
+        start_index : int, optional
+            The result index to start on. By default only 100 records will be returned at a time, so use this
+            to start at a later index in the results. For example, to get results 200 - 300, set `start_index` to 200.
+            (default is 0)
+        limit : int, optional
+            The number of results to return per request. (default is 100)
 
-        Returns a dictionary object with the list of matching loans under the 'loans' key.
+        Returns
+        -------
+        dict
+            A dictionary object with the list of matching loans under the `loans` key.
         """
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
 
@@ -263,24 +376,98 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False, do_not_clear_staging=False):
+    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
-        If you want to invest in these loan notes, you will have to start and order and use add_batch to
-        add all the loan fragments to them.
+        One way to invest in these loan notes, is to start an order and use add_batch to add all the
+        loan fragments to them. (see examples)
 
-        Parameters:
-            cash -- The amount you want to invest in a portfolio
-            max_per_note -- The maximum dollar amount you want to invest per note. Must be 25 or above
-            min/max_percent -- Matches a portfolio with a average expected APR between these two numbers.
-                               If there are multiple options, the one closes to the max will be chosen.
-            filters -- (optional) The filters to use to search for notes
-            automatically_invest -- (default False) If you want the tool to create an order and automatically
-                                    invest the portfolio that matches your filter.
-            do_not_clear_staging -- Similar to automatically_invest, don't do this unless you know what you're doing.
-                                    Setting this to True stops the method from clearing the loan staging area before returning
+        Parameters
+        ----------
+        cash : int
+            The total amount you want to invest across a portfolio of loans (at least $25).
+        max_per_note : int, optional
+            The maximum dollar amount you want to invest per note. Must be a multiple of 25
+        min_percent : int, optional
+            THIS IS NOT PER NOTE, but the minimum average percent of return for the entire portfolio.
+        max_percent : int, optional
+            THIS IS NOT PER NOTE, but the maxmimum average percent of return for the entire portfolio.
+        filters : lendingclub.filters.*, optional
+            The filters to use to search for portfolios
+        automatically_invest : boolean, optional
+            If you want the tool to create an order and automatically invest in the portfolio that matches your filter.
+            (default False)
 
-        Returns a dict representing a new portfolio or False if nothing was found.
+        Returns
+        -------
+        dict
+            A dict representing a new portfolio or False if nothing was found.
+            If `automatically_invest` was set to `True`, the dict will contain an `order_id` key with
+            the ID of the completed investment order.
+
+        Notes
+        -----
+        **The min/max_percent parameters**
+
+        When searching for portfolios, these parameters will match a portfolio of loan notes which have
+        an **AVERAGE** percent return between these values. If there are multiple portfolio matches, the
+        one closes to the max percent will be chosen.
+
+        Examples
+        --------
+        Here we want to invest $400 in a portfolio with only B, C, D and E grade notes with an average overall return between 17% - 19%. This similar to finding a portfolio in the 'Invest' section on lendingclub.com::
+
+            >>> from lendingclub import LendingClub
+            >>> from lendingclub.filters import Filter
+            >>> lc = LendingClub()
+            >>> lc.authenticate()
+            Email:test@test.com
+            Password:
+            True
+            >>> filters = Filter()                  # Set the search filters (only B, C, D and E grade notes)
+            >>> filters['grades']['C'] = True
+            >>> filters['grades']['D'] = True
+            >>> filters['grades']['E'] = True
+            >>> lc.get_cash_balance()               # See the cash you have available for investing
+            463.80000000000001
+
+            >>> portfolio = lc.build_portfolio(400, # Invest $400 in a portfolio...
+                    min_percent=17.0,               # Return percent average between 17 - 19%
+                    max_percent=19.0,
+                    max_per_note=50,                # As much as $50 per note
+                    filters=filters)                # Search using your filters
+
+            >>> len(portfolio['loan_fractions'])    # See how many loans are in this portfolio
+            16
+            >>> order = lc.start_order()            # Start a new order
+            >>> order.add_batch(portfolio)          # Add the portfolio to the order
+            >>> order.execute()                     # Execute the order
+            1861880
+
+        Here we do a similar search, but automatically invest the found portfolio. **NOTE** This does not allow
+        you to review the portfolio before you invest in it.
+
+            >>> from lendingclub import LendingClub
+            >>> from lendingclub.filters import Filter
+            >>> lc = LendingClub()
+            >>> lc.authenticate()
+            Email:test@test.com
+            Password:
+            True
+                                                    # Filter shorthand
+            >>> filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
+            >>> lc.get_cash_balance()               # See the cash you have available for investing
+            463.80000000000001
+
+            >>> portfolio = lc.build_portfolio(400,
+                    min_percent=17.0,
+                    max_percent=19.0,
+                    max_per_note=50,
+                    filters=filters,
+                    automatically_invest=True)      # Same settings, except invest immediately
+
+            >>> portfolio['order_id']               # See order ID
+            1861880
         """
         assert filters is None or isinstance(filters, Filter), 'filter is not a lendingclub.filters.Filter'
         assert max_per_note >= 25, 'max_per_note must be greater than or equal to 25'
@@ -375,11 +562,10 @@ class LendingClub:
 
             # Not investing -- reset portfolio search session and return
             if automatically_invest is not True:
-                if do_not_clear_staging is not True:
-                    self.session.clear_session_order()
+                self.session.clear_session_order()
 
             # Invest in this porfolio
-            elif automatically_invest is True: # just to be sure
+            elif automatically_invest is True:  # just to be sure
                 order = self.start_order()
 
                 # This should probably only be ever done here...ever.
@@ -398,15 +584,27 @@ class LendingClub:
 
     def my_notes(self, start_index=0, limit=100, get_all=False, sort_by='loanId', sort_dir='asc'):
         """
-        Return all the loan notes you've invested in. By default it'll return 100 results at a time.
+        Return all the loan notes you've already invested in. By default it'll return 100 results at a time.
 
         Parameters
-            start_index -- The result index to start on. For example, if limit is set to 50,
-                            to get results 100 - 150, start_index should be set to 100.
-            limit -- The number of notes you want returned per request
-            get_all -- Return all results, instead of paged.
+        ----------
+        start_index : int, optional
+            The result index to start on. By default only 100 records will be returned at a time, so use this
+            to start at a later index in the results. For example, to get results 200 - 300, set `start_index` to 200.
+            (default is 0)
+        limit : int, optional
+            The number of results to return per request. (default is 100)
+        get_all : boolean, optional
+            Return all results in one request, instead of 100 per request.
+        sort_by : string, optional
+            What key to sort on
+        sort_dir : {'asc', 'desc'}, optional
+            Which direction to sort
 
-        Returns a dictionary with a list of matching notes on the 'loans' key
+        Returns
+        -------
+        dict
+            A dictionary with a list of matching notes on the `loans` key
         """
 
         index = start_index
@@ -448,12 +646,35 @@ class LendingClub:
 
     def get_note(self, note_id):
         """
-        Get a note that you've invested in by ID
+        Get a loan note that you've invested in by ID
 
-        Parameters:
-            note_id -- The note ID
+        Parameters
+        ----------
+        note_id : int
+            The note ID
 
-        Returns a matching note or False
+        Returns
+        -------
+        dict
+            A dictionary representing the matching note or False
+
+        Examples
+        --------
+            >>> from lendingclub import LendingClub
+            >>> lc = LendingClub(email='test@test.com', password='secret123')
+            >>> lc.authenticate()
+            True
+            >>> notes = lc.get_notes()                  # Get the first 100 loan notes
+            >>> len(notes['loans'])
+            100
+            >>> notes['total']                          # See the total number of loan notes you have
+            630
+            >>> notes = lc.get_notes(start_index=100)   # Get the next 100 loan notes
+            >>> len(notes['loans'])
+            100
+            >>> notes = lc.get_notes(get_all=True)       # Get all notes in one request (may be slow)
+            >>> len(notes['loans'])
+            630
         """
 
         index = 0
@@ -480,17 +701,28 @@ class LendingClub:
     def search_my_notes(self, loan_id=None, order_id=None, grade=None, portfolio_name=None, status=None, term=None):
         """
         Search for notes you are invested in. Use the parameters to define how to search.
-        Passing no parameters is like calling `my_notes(get_all=True)`
+        Passing no parameters is the same as calling `my_notes(get_all=True)`
 
-        Parameters:
-            loan_id -- Search for notes that are for a specific loan
-            order_id -- Search for notes from a particular order
-            grade -- Match loan grades (A - G)
-            portfolio_name -- Search for notes in a portfolio with this name (case sensitive)
-            status -- The funding status string: issued, in-review, in-funding, current, charged-off, late, in-grace-period, fully-paid)
-            term -- Term length, either 60 or 36 (for 5 year and 3 year, respectively)
+        Parameters
+        ----------
+        loan_id : int, optional
+            Search for notes for a specific loan. Since a loan is broken up into a pool of notes, it's possible
+            to invest multiple notes in a single loan
+        order_id : int, optional
+            Search for notes from a particular investment order.
+        grade : {A, B, C, D, E, F, G}, optional
+            Match by a particular loan grade
+        portfolio_name : string, optional
+            Search for notes in a portfolio with this name (case sensitive)
+        status : string, {issued, in-review, in-funding, current, charged-off, late, in-grace-period, fully-paid}, optional
+            The funding status string.
+        term : {60, 36}, optional
+            Term length, either 60 or 36 (for 5 year and 3 year, respectively)
 
-        Returns a dictionary with a list of matching notes on the 'loans' key
+        Returns
+        -------
+        dict
+            A dictionary with a list of matching notes on the `loans` key
         """
         assert grade is None or type(grade) is str, 'grade must be a string'
         assert portfolio_name is None or type(portfolio_name) is str, 'portfolio_name must be a string'
@@ -566,7 +798,12 @@ class LendingClub:
 
     def start_order(self):
         """
-        Start a new investment order or loans
+        Start a new investment order for loans
+
+        Returns
+        -------
+        lendingclub.Order
+            The :class:`lendingclub.Order` object you can use for investing in loan notes.
         """
         order = Order(lc=self)
         return order
@@ -574,10 +811,64 @@ class LendingClub:
 
 class Order:
     """
-    Manages an investment order
+    Used to create an order for one or more loan notes. It's best to create the Order
+    instance through the :func:`lendingclub.LendingClub.start_order()` method (see examples below).
+
+    Parameters
+    ----------
+    lc : :class:`lendingclub.LendingClub`
+        The LendingClub API object that is used to communicate with lendingclub.com
+
+    Examples
+    --------
+
+    Invest in a single loan::
+
+        >>> from lendingclub import LendingClub
+        >>> lc = LendingClub()
+        >>> lc.authenticate()
+        Email:test@test.com
+        Password:
+        True
+        >>> order = lc.start_order()           # Start a new investment order
+        >>> order.add(654321, 25)              # Add loan 654321 to the order with a $25 investment
+        >>> order.execute()                    # Execute the order
+        1861879
+        >>> order.order_id                     # See the order ID
+        1861879
+        >>> order.assign_to_portfolio('Foo')   # Assign the loan in this order to a portfolio called 'Foo'
+        True
+
+    Invest $25 in multiple loans::
+
+        >>> from lendingclub import LendingClub
+        >>> lc = LendingClub(email='test@test.com', password='mysecret')
+        >>> lc.authenticate()
+        True
+        >>> loans = [1234, 2345, 3456]       # Create a list of loan IDs
+        >>> order = lc.start_order()          # Start a new order
+        >>> order.add_batch(loans, 25)        # Invest $25 in each loan
+        >>> order.execute()                   # Execute the order
+        1861880
+
+    Invest different amounts in multiple loans::
+
+        >>> from lendingclub import LendingClub
+        >>> lc = LendingClub(email='test@test.com', password='mysecret')
+        >>> lc.authenticate()
+        True
+        >>> loans = [
+            {'loan_id': 1234, invest_amount: 50},  # $50 in 1234
+            {'loan_id': 2345, invest_amount: 25},  # $25 in 2345
+            {'loan_id': 3456, invest_amount: 150}  # $150 in 3456
+        ]
+        >>> order = lc.start_order()
+        >>> order.add_batch(loans)                 # Do not pass `batch_amount` parameter this time
+        >>> order.execute()                        # Execute the order
+        1861880
     """
 
-    loans = {}
+    loans = None
     order_id = 0
     lc = None
 
@@ -590,9 +881,6 @@ class Order:
     def __init__(self, lc):
         """
         Start a new order
-
-        Parameters:
-            lc -- The LendingClub API object
         """
         self.lc = lc
         self.loans = {}
@@ -610,9 +898,12 @@ class Order:
         If this loan is already in your order, it's amount will be replaced
         with the this new amount
 
-        Parameters:
-            loan_id -- The ID of the loan you want to add (or a dictionary containing a loan_id value)
-            amount -- The dollar amount you want to invest in this loan.
+        Parameters
+        ----------
+        loan_id : int or dict
+            The ID of the loan you want to add or a dictionary containing a `loan_id` value
+        amount : int % 25
+            The dollar amount you want to invest in this loan, as a multiple of 25.
         """
         assert amount > 0 and amount % 25 == 0, 'Amount must be a multiple of 25'
         assert type(amount) in (float, int), 'Amount must be a number'
@@ -629,9 +920,12 @@ class Order:
         """
         Update a loan in your order with this new amount
 
-        Parameters:
-            loan_id -- The ID of the loan you want to add
-            amount -- The dollar amount you want to invest in this loan.
+        Parameters
+        ----------
+        loan_id : int or dict
+            The ID of the loan you want to update or a dictionary containing a `loan_id` value
+        amount : int % 25
+            The dollar amount you want to invest in this loan, as a multiple of 25.
         """
         self.add(loan_id, amount)
 
@@ -639,25 +933,32 @@ class Order:
         """
         Add a batch of loans to your order.
 
-        Each item in the list can either be a loan ID OR a dictionary object containing
-        a loan_id and invest_amount. The invest_amount value is the dollar amount you wish to invest in this loan.
+        Parameters
+        ----------
+        loans : list
+            A list of dictionary objects representing each loan and the amount you want to invest in it (see examples below).
+        batch_amount : int, optional
+            The dollar amount you want to set on ALL loans in this batch.
+            **NOTE:** This will override the invest_amount value for each loan.
 
-        Example 1:
+        Examples
+        --------
+        Each item in the loans list can either be a loan ID OR a dictionary object containing `loan_id` and
+        `invest_amount` values. The invest_amount value is the dollar amount you wish to invest in this loan.
+
+        **List of IDs**::
+
             # Invest $50 in 3 loans
             order.add_batch([1234, 2345, 3456], 50)
 
-        Example 2:
+        **List of Dictionaries**::
+
             # Invest different amounts in each loans
             order.add_batch([
                 {'loan_id': 1234, invest_amount: 50},
                 {'loan_id': 2345, invest_amount: 25},
                 {'loan_id': 3456, invest_amount: 150}
             ])
-
-        Parameters:
-            loans -- A list of dictionary objects representing each loan and the amount you want to invest in it.
-            batch_amount -- The dollar amount you want to set on ALL loans in this batch.
-                            **NOTE:** This will override the invest_amount value for each loan.
         """
         assert batch_amount is None or batch_amount % 25 == 0, 'batch_amount must be a multiple of 25'
 
@@ -685,15 +986,17 @@ class Order:
         """
         Remove a loan from your order
 
-        Parameters:
-            loan_id -- The ID of the loan to remove from your order
+        Parameters
+        ----------
+        loan_id : int
+            The ID of the loan you want to remove
         """
         if loan_id in self.loans:
             del self.loans[loan_id]
 
     def remove_all(self):
         """
-        Remove all loans
+        Remove all loans from your order
         """
         self.loans = {}
 
@@ -701,11 +1004,20 @@ class Order:
         """
         Place the order with LendingClub
 
-        Parameters:
-            portfolio_name -- The name of the portfolio to add the invested loan notes to.
-                              This can be a new or existing portfolio name.
+        Parameters
+        ----------
+        portfolio_name : string
+            The name of the portfolio to add the invested loan notes to.
+            This can be a new or existing portfolio name.
 
-        Returns the order ID or raises an exception
+        Raises
+        ------
+        LendingClubError
+
+        Returns
+        -------
+        int
+            The completed order ID
         """
         assert self.order_id == 0, 'This order has already been place. Start a new order.'
         assert len(self.loans) > 0, 'There aren\'t any loans in your order'
@@ -727,10 +1039,18 @@ class Order:
         """
         Assign all the notes in this order to a portfolio
 
-        Parameters:
+        Parameters
+        ----------
             portfolio_name -- The name of the portfolio to assign it to (new or existing)
 
-        Returns True on success
+        Raises
+        ------
+        LendingClubError
+
+        Returns
+        -------
+        boolean
+            True on success
         """
         assert self.order_id > 0, 'You need to execute this order before you can assign to a portfolio.'
 
@@ -760,9 +1080,8 @@ class Order:
         #
         # Stage all the loans to the order
         #
-        loan_ids = map(str, self.loans.keys())
-        loan_ids = ','.join(loan_ids)
-        self.__log('Staging loans {0}'.format(loan_ids))
+        loan_ids = self.loans.keys()
+        self.__log('Staging loans {0}'.format(','.join(loan_ids)))
 
         # LendingClub requires you to search for the loans before you can stage them
         f = FilterByLoanID(loan_ids)
@@ -827,10 +1146,15 @@ class Order:
         """
         Use the struts token to place the order.
 
-        Parameters:
-            token -- The struts token received from the place order page
+        Parameters
+        ----------
+        token : string
+            The struts token received from the place order page
 
-        Returns the order ID.
+        Returns
+        -------
+        int
+            The completed order ID.
         """
         order_id = 0
         response = None
@@ -869,9 +1193,15 @@ class Order:
 
 class LendingClubError(Exception):
     """
-    An error with the LendingClub API.
-    If the error was the result of an API call, the response attribute
-    will contain the HTTP requests response object that was used to make the call to LendingClub.
+    An error occurred.
+    If the error was the result of an API call, the response attribute will contain the HTTP
+    requests response object that was used to make the call to LendingClub.
+
+    Parameters
+    ----------
+    value : string
+        The error message
+    response : `requests.Response <http://docs.python-requests.org/en/latest/api/#requests.Response>`_
     """
     response = None
 
