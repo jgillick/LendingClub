@@ -30,6 +30,9 @@ To install, run::
 
     sudo python ./setup.py install
 
+Documentation
+-------------
+View the full `API documentation <https://python-lendingclub.readthedocs.org/en/latest/>`_.
 
 Examples
 --------
