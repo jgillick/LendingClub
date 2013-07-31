@@ -1,3 +1,7 @@
+v0.1.2 -- 2013-07-31
+  * Let FilterByLoanID accept list of IDs
+  * Add sphinx API documentation
+
 v0.1.1 -- 2013-07-29
   * Batch order bug fixes
     + Fix bugs with staging orders. List of IDs had to be converted to strings before joining (https://github.com/jgillick/LendingClub/issues/1)
