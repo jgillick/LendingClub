@@ -1081,7 +1081,7 @@ class Order:
         # Stage all the loans to the order
         #
         loan_ids = self.loans.keys()
-        self.__log('Staging loans {0}'.format(','.join(loan_ids)))
+        self.__log('Staging loans {0}'.format(loan_ids))
 
         # LendingClub requires you to search for the loans before you can stage them
         f = FilterByLoanID(loan_ids)
