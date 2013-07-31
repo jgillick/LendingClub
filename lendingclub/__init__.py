@@ -30,6 +30,7 @@ THE SOFTWARE.
 
 import re
 import os
+from pprint import pprint
 from bs4 import BeautifulSoup
 from lendingclub.filters import Filter, FilterByLoanID, SavedFilter
 from lendingclub.session import Session
@@ -376,7 +377,7 @@ class LendingClub:
 
         return False
 
-    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False):
+    def build_portfolio(self, cash, max_per_note=25, min_percent=0, max_percent=20, filters=None, automatically_invest=False, do_not_clear_staging=False):
         """
         Returns a list of loan notes that are diversified by your min/max percent request and filters.
         One way to invest in these loan notes, is to start an order and use add_batch to add all the
@@ -397,6 +398,9 @@ class LendingClub:
         automatically_invest : boolean, optional
             If you want the tool to create an order and automatically invest in the portfolio that matches your filter.
             (default False)
+        do_not_clear_staging : boolean, optional
+            Similar to automatically_invest, don't do this unless you know what you're doing.
+            Setting this to True stops the method from clearing the loan staging area before returning
 
         Returns
         -------
@@ -562,7 +566,8 @@ class LendingClub:
 
             # Not investing -- reset portfolio search session and return
             if automatically_invest is not True:
-                self.session.clear_session_order()
+                if do_not_clear_staging is not True:
+                    self.session.clear_session_order()
 
             # Invest in this porfolio
             elif automatically_invest is True:  # just to be sure
@@ -963,7 +968,7 @@ class Order:
         assert batch_amount is None or batch_amount % 25 == 0, 'batch_amount must be a multiple of 25'
 
         # Add each loan
-        assert type(loans) is list, 'The loans property must be a list'
+        assert type(loans) is list, 'The loans property must be a list. (not {0})'.format(type(loans))
         for loan in loans:
             loan_id = loan
             amount = batch_amount
@@ -1135,8 +1140,8 @@ class Order:
             if strut_tag and strut_tag['value'].strip():
                 return strut_tag['value'].strip()
             else:
-                self.__log('No struts token! {0}', response.text)
-                raise LendingClubError('Could not find the struts token to place order with', response)
+                self.__log('No struts token! HTML: {0}'.format(response.text))
+                raise LendingClubError('No struts token', response)
 
         except Exception as e:
             self.__log('Could not get struts token. Error message: {0}'.format(str(e)))
