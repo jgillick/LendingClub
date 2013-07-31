@@ -232,7 +232,7 @@ class Session:
         except Exception:
             return False
 
-    def request(self, method, path, query=None, data=None, redirects=False):
+    def request(self, method, path, query=None, data=None, redirects=True):
         """
         Sends HTTP request to LendingClub.
 
@@ -277,6 +277,8 @@ class Session:
 
             self.last_response = request
 
+            self.__log('Status code: {0}'.format(request.status_code))
+
             # Update session time
             self.last_request_time = time.time()
 
@@ -287,19 +289,19 @@ class Session:
 
         return request
 
-    def post(self, path, query=None, data=None, redirects=False):
+    def post(self, path, query=None, data=None, redirects=True):
         """
         POST request wrapper for :func:`request()`
         """
         return self.request('POST', path, query, data, redirects)
 
-    def get(self, path, query=None, redirects=False):
+    def get(self, path, query=None, redirects=True):
         """
         GET request wrapper for :func:`request()`
         """
         return self.request('GET', path, query, None, redirects)
 
-    def head(self, path, query=None, data=None, redirects=False):
+    def head(self, path, query=None, data=None, redirects=True):
         """
         HEAD request wrapper for :func:`request()`
         """
