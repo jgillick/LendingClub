@@ -1,7 +1,44 @@
 #!/usr/bin/env python
 
 """
-Create a search filter
+Filters are used to search lending club for loans to invest in. There are many filters you can use, here are some
+examples with the main `Filter` class.
+
+For example, to search for B grade loans,
+you could create a filter like this:
+
+    >>> filters = Filter()
+    >>> filters['grades']['B'] = True
+
+Or, another more complex example:
+
+    >>> filters = Filter()
+    >>> filters['grades']['B'] = True
+    >>> filters['funding_progress'] = 90
+    >>> filters['term']['Year5'] = False
+
+This would search for B grade loans that are at least 90% funded and not 5 year loans.
+
+Filters currently do not support all search criteria. To see what is supported, create one and print it:
+
+    >>> filter = Filter()
+    >>> print filter
+    {'exclude_existing': True,
+     'funding_progress': 0,
+     'grades': {'A': False,
+                'All': True,
+                'B': False,
+                'C': False,
+                'D': False,
+                'E': False,
+                'F': False,
+                'G': False},
+     'term': {'Year3': True,
+              'Year5': True}}
+
+You can also set the values on instantiation:
+
+    >>> filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
 """
 
 """
@@ -35,6 +72,51 @@ from pybars import Compiler
 
 
 class Filter(dict):
+    """
+    The default search filter that let's you refine your search based on a
+    dictionary of search facets. Not all search options are supported yet.
+
+    Parameters
+    ----------
+    filters : dict, optional
+        This will override any of the search filters you want on instantiation.
+
+    Examples
+    --------
+    See the default filters::
+
+        >>> from lendingclub.filters import Filter
+        >>> from pprint import pprint
+        >>> filter = Filter()
+        >>> pprint(filter)
+        {'exclude_existing': True,
+         'funding_progress': 0,
+         'grades': {'A': False,
+                    'All': True,
+                    'B': False,
+                    'C': False,
+                    'D': False,
+                    'E': False,
+                    'F': False,
+                    'G': False},
+         'term': {'Year3': True,
+                  'Year5': True}}
+
+    Set filters on instantiation::
+
+        >>> from lendingclub.filters import Filter
+        >>> from pprint import pprint
+        >>> filters = Filter({'grades': {'B': True, 'C': True, 'D': True, 'E': True}})
+        >>> pprint(filters['grades'])
+        {'All': False,
+         'A': False,
+         'B': True,
+         'C': True,
+         'D': True,
+         'E': True,
+         'F': False,
+         'G': False}
+    """
 
     tmpl_file = False
     __initialized = False
@@ -160,10 +242,20 @@ class Filter(dict):
         APIs for LendingClub, they could change the way their search works at anytime, which
         might break the filters.
 
-        Parameters:
-            results -- A list of loan note records returned from LendingClub
+        Parameters
+        ----------
+        results : list
+            A list of loan note records returned from LendingClub
 
-        Returns True or raises FilterValidationError
+        Returns
+        -------
+        boolean
+            True or raises FilterValidationError
+
+        Raises
+        ------
+        FilterValidationError
+            If a loan does not match the filter criteria
         """
         for loan in results:
             self.validate_one(loan)
@@ -174,10 +266,20 @@ class Filter(dict):
         """
         Validate a single result record to the filters
 
-        Parameters:
-            loan -- A single loan note record returned from LendingClub
+        Parameters
+        ----------
+        loan : dict
+            A single loan note record
 
-        Returns True or raises FilterValidationError
+        Returns
+        -------
+        boolean
+            True or raises FilterValidationError
+
+        Raises
+        ------
+        FilterValidationError
+            If the loan does not match the filter criteria
         """
         assert type(loan) is dict, 'loan parameter must be a dictionary object'
 
@@ -280,10 +382,43 @@ class Filter(dict):
 
 class SavedFilter(Filter):
     """
-    Instead of building a filter, pull a filter you have created and
-    saved on LendingClub.
+    Load a saved search filter from the site. Since this is
+    loading a filter from the server, the individual values cannot be modified.
+    Most often it is easiest to load the saved filters from LendingClub, via `get_saved_filters` and `get_saved_filter`.
+    See examples.
 
-    This kind of filter cannot be inspected or changed.
+    Parameters
+    ----------
+    lc : :py:class:`lendingclub.LendingClub`
+        An instance of the LendingClub class that will be used to communicate with the site
+    filter_id : int
+        The ID of the filter to load
+
+    Examples
+    --------
+
+    The SavedFilter needs to use an instance of LendingClub to access the site, so the class has a couple wrappers
+    you can use to load SavedFilters. Here are a couple examples of loading saved filters from the LendingClub instance.
+
+    Load all saved filters:
+        >>> from lendingclub import LendingClub
+        >>> from lendingclub.filters import SavedFilter
+        >>> lc = LendingClub(email='test@test.com', password='secret123')
+        >>> lc.authenticate()
+        True
+        >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
+        >>> print filters
+        [<SavedFilter: 12345, '90 Percent'>, <SavedFilter: 23456, 'Only A loans'>]
+
+    Load a single saved filter:
+        >>> from lendingclub import LendingClub
+        >>> from lendingclub.filters import SavedFilter
+        >>> lc = LendingClub(email='test@test.com', password='secret123')
+        >>> lc.authenticate()
+        True
+        >>> filter = lc.get_saved_filter(23456)    # Get a single saved search filter from the site by ID
+        >>> filter.name
+        u'Only A'
     """
     id = None
     lc = None
@@ -297,10 +432,15 @@ class SavedFilter(Filter):
         """
         Get a list of all your saved filters
 
-        Parameters:
-            lc -- An instance of the LendingClub class
+        Parameters
+        ----------
+        lc : :py:class:`lendingclub.LendingClub`
+            An instance of the authenticated LendingClub class
 
-        Returns a list of SavedFilter objects
+        Returns
+        -------
+        list
+            A list of lendingclub.filters.SavedFilter objects
         """
 
         filters = []
@@ -315,14 +455,6 @@ class SavedFilter(Filter):
         return filters
 
     def __init__(self, lc, filter_id):
-        """
-        Load the filter by ID or Name
-
-        Parameters:
-            lc -- An instance of the LendingClub class
-            filter_id -- The ID of the filter to load (find it by calling `all_filters()`)
-        """
-
         self.id = filter_id
         self.lc = lc
         self.load()
@@ -420,7 +552,7 @@ class SavedFilter(Filter):
                 raise SavedFilterError('Could not parse filter from the JSON response: {0}'.format(str(e)))
 
             self.json_text = json_text
-            self.analyze()
+            self.__analyze()
 
         else:
             raise SavedFilterError('A saved filter could not be found for ID {0}'.format(self.id), response)
@@ -434,7 +566,7 @@ class SavedFilter(Filter):
     def __setitem__(self, key, value):
         raise SavedFilterError('A saved filter cannot be modified')
 
-    def analyze(self):
+    def __analyze(self):
         """
         Analyze the filter JSON and attempt to parse out the individual filters.
         """
@@ -498,15 +630,57 @@ class SavedFilter(Filter):
         pass
 
     def search_string(self):
+        """
+        Get the search JSON string to send to the server
+        """
         return self.json_text
 
 
 class FilterByLoanID(Filter):
     """
-    Creates a filter by loan ID or a string of comma delimited loan IDs
+    Creates a filter to search by loan ID. You can either search by
+    1 loan ID or for multiple loans by ID.
+
+    Parameters
+    ----------
+    loan_id : int or list
+        The loan ID or a list of loan IDs
+
+    Examples
+    --------
+
+    Search for 1 loan by ID:
+
+        >>> from lendingclub import LendingClub
+        >>> from lendingclub.filters import FilterByLoanID
+        >>> lc = LendingClub(email='test@test.com', password='secret123')
+        >>> lc.authenticate()
+        True
+        >>> filter = FilterByLoanID(1234)  # Search for the loan 1234
+        >>> results = lc.search(filter)
+        >>> len(results['loans'])
+        1
+
+    Search for multiple loans by ID:
+
+        >>> from lendingclub import LendingClub
+        >>> from lendingclub.filters import FilterByLoanID
+        >>> lc = LendingClub(email='test@test.com', password='secret123')
+        >>> lc.authenticate()
+        True
+        >>> filter = FilterByLoanID(54321, 76432)  # Search for two loans: 54321 and 76432
+        >>> results = lc.search(filter)
+        >>> len(results['loans'])
+        2
     """
 
     def __init__(self, loan_id):
+
+        # Convert a list to comma delimited string
+        if type(loan_id) is list:
+            loan_id = map(str, loan_id)
+            loan_id = ','.join(loan_id)
+
         self['loan_id'] = loan_id
         this_path = os.path.dirname(os.path.realpath(__file__))
         self.tmpl_file = os.path.join(this_path, 'filter.handlebars')
@@ -519,10 +693,17 @@ class FilterValidationError(Exception):
     """
     A loan note does not match the filters set.
 
-    Attributes:
-        value -- The error message
-        loan -- The loan note that did not match
-        criteria -- The filter that did not match.
+    After a search is performed, each loan returned from the server will be
+    validate against the filter's criteria, for good measure. If it doesn't match, this exception is thrown.
+
+    Parameters
+    ----------
+    value : string
+        The error message
+    loan : dict
+        The loan that did not match
+    criteria : string
+        The filter item that the loan failed on.
     """
     value = None
     loan = None
@@ -545,6 +726,16 @@ class FilterValidationError(Exception):
 
 
 class SavedFilterError(Exception):
+    """
+    An error occurred while loading or processing a :class:SavedFilter
+
+    Parameters
+    ----------
+    value : string
+        The error message
+    response : `requests.Response <http://docs.python-requests.org/en/latest/api/#requests.Response>`_
+        The Response object from the HTTP request to find the saved filter.
+    """
     value = None
     request = None
 
