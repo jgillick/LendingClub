@@ -1,6 +1,8 @@
 v0.1.2 -- 2013-07-31
   * Let FilterByLoanID accept list of IDs
   * Add sphinx API documentation
+  * Default redirects to True for HTTP requests
+  * Add do_not_clear_staging parameter back to build_portfolio
 
 v0.1.1 -- 2013-07-29
   * Batch order bug fixes
