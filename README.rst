@@ -127,13 +127,13 @@ Use a filter saved on lendingclub.com to search for loans **SEE NOTE BELOW**::
     Email:test@test.com
     Password:
     True
-    >>> filters = SavedFilter.all_filters(lc)    # Get a list of all saved filters on LendinClub.com
+    >>> filters = lc.get_saved_filters()         # Get a list of all saved filters on LendinClub.com
     >>> print filters                            # I've pretty printed the output for you
     [
         <SavedFilter: 12345, '90 Percent'>,
         <SavedFilter: 23456, 'Only A loans'>
     ]
-    >>> filter = SavedFilter(lc, 7611034)        # Load a saved filter by ID 7611034
+    >>> filter = lc.get_saved_filter(23456)      # Load a saved filter by ID 7611034
     >>> filter.name
     u'Only A'
     >>> results = lc.search(filter)              # Search for loan notes with that filter
@@ -147,10 +147,8 @@ Batch Investing
 Invest in a list of loans in one action::
 
     >>> from lendingclub import LendingClub
-    >>> lc = LendingClub()
+    >>> lc = LendingClub(email='test@test.com', password='secret123')
     >>> lc.authenticate()
-    Email:test@test.com
-    Password:
     True
     >>> loans = [1234, 2345, 3456]       # Create a list of loan IDs
     >>> order = lc.start_order()          # Start a new order
