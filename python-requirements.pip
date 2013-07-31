@@ -1,0 +1,10 @@
+# LendingClub
+requests
+beautifulsoup4
+html5lib
+pybars
+
+# Documentation
+sphinx
+Distribute
+numpydoc
