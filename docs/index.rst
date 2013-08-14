@@ -99,15 +99,15 @@ Get a list of the loan notes that you have **already** invested in (by default t
     >>> lc = LendingClub(email='test@test.com', password='secret123')
     >>> lc.authenticate()
     True
-    >>> notes = lc.get_notes()                  # Get the first 100 loan notes
+    >>> notes = lc.my_notes()                  # Get the first 100 loan notes
     >>> len(notes['loans'])
     100
     >>> notes['total']                          # See the total number of loan notes you have
     630
-    >>> notes = lc.get_notes(start_index=100)   # Get the next 100 loan notes
+    >>> notes = lc.my_notes(start_index=100)   # Get the next 100 loan notes
     >>> len(notes['loans'])
     100
-    >>> notes = lc.get_notes(get_all=True)      # Get all notes in one request (may be slow)
+    >>> notes = lc.my_notes(get_all=True)      # Get all notes in one request (may be slow)
     >>> len(notes['loans'])
     630
 
