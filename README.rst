@@ -92,8 +92,9 @@ Here we want to invest $400 in a portfolio with only B, C, D and E grade notes w
 
     >>> len(portfolio['loan_fractions'])  # See how many loans are in this portfolio
     16
+    >>> loans_notes = portfolio['loan_fractions']
     >>> order = lc.start_order()          # Start a new order
-    >>> order.add_batch(portfolio)        # Add the portfolio to the order
+    >>> order.add_batch(loans_notes)      # Add the loans to the order
     >>> order.execute()                   # Execute the order
     1861880
 

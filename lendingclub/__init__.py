@@ -443,8 +443,9 @@ class LendingClub:
 
             >>> len(portfolio['loan_fractions'])    # See how many loans are in this portfolio
             16
+            >>> loans_notes = portfolio['loan_fractions']
             >>> order = lc.start_order()            # Start a new order
-            >>> order.add_batch(portfolio)          # Add the portfolio to the order
+            >>> order.add_batch(loans_notes)        # Add the loan notes to the order
             >>> order.execute()                     # Execute the order
             1861880
 
@@ -1094,7 +1095,7 @@ class Order:
         if len(results['loans']) == 0 or results['totalRecords'] != len(self.loans):
             raise LendingClubError('Could not stage the loans. The number of loans in your batch does not match totalRecords. {0} != {1}'.format(len(self.loans), results['totalRecords']), results)
 
-        # Stage all loans
+        # Stage each loan
         for loan_id, amount in self.loans.iteritems():
             payload = {
                 'method': 'addToPortfolio',
