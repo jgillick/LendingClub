@@ -478,7 +478,7 @@ class SavedFilter(Filter):
         self.response = response
         json_response = response.json()
 
-        if self.lc.session.json_success(json_response):
+        if self.lc.session.json_success(json_response) and json_response['filterName'] != 'No filters':
             self.name = json_response['filterName']
 
             #
@@ -540,6 +540,9 @@ class SavedFilter(Filter):
 
             # Verify valid JSON
             try:
+                if json_text.strip() == '':
+                    raise SavedFilterError('A saved filter could not be found for ID {0}'.format(self.id), response)
+
                 json_test = json.loads(json_text)
 
                 # Make sure it looks right
