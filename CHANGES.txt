@@ -1,3 +1,6 @@
+v0.1.5 -- 2013-09-05
+  * Better error handling when a SavedFilter cannot be found.
+
 v0.1.4 -- 2013-09-05
   * Upcase the license file name to LICENSE.txt
   * Doc updates
