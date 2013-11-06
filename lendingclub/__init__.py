@@ -492,6 +492,7 @@ class LendingClub:
             'max_per_note': max_per_note,
             'filter': filter_str
         }
+        self.__log('POST VALUES -- amount: {0}, max_per_note: {1}, filter: ...'.format(cash, max_per_note))
         response = self.session.post('/portfolio/lendingMatchOptionsV2.action', data=payload)
         json_response = response.json()
 
@@ -555,6 +556,10 @@ class LendingClub:
                 # Normalize by converting loanFractionAmount to invest_amount
                 for frac in fractions:
                     frac['invest_amount'] = frac['loanFractionAmount']
+
+                    # Raise error if amount is greater than max_per_note
+                    if frac['invest_amount'] > max_per_note:
+                        raise LendingClubError('ERROR: LendingClub tried to invest ${0} in a loan note. Your max per note is set to ${1}. Portfolio investment canceled.'.format(frac['invest_amount'], max_per_note))
 
             if len(fractions) == 0:
                 self.__log('The selected portfolio didn\'t have any loans')
