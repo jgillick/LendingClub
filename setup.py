@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='lendingclub',
-    version=open('lendingclub/VERSION').read(),
+    version=open('lendingclub/VERSION').read().strip(),
     author='Jeremy Gillick',
     author_email='none@none.com',
     packages=['lendingclub', 'lendingclub.tests'],
