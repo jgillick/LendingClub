@@ -13,10 +13,10 @@ Requirements
 
 The following Python libraries are required:
 
-* requests
-* beautifulsoup4
-* html5lib
-* pybars
+* `requests <http://docs.python-requests.org/en/latest/>`_
+* `beautifulsoup4 <http://www.crummy.com/software/BeautifulSoup/>`_
+* `html5lib <https://github.com/html5lib/html5lib-python>`_
+* `pybars <https://github.com/wbond/pybars>`_
 
 These can automatically be installed with `pip <http://www.pip-installer.org/en/latest/>`_::
 
