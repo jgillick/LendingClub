@@ -200,7 +200,7 @@ class Filter(dict):
         If a grade has been set, set All to false
         """
 
-        if self['grades']['All'] is True:
+        if 'grades' in self and self['grades']['All'] is True:
             for grade in self['grades']:
                 if grade != 'All' and self['grades'][grade] is True:
                     self['grades']['All'] = False
