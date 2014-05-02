@@ -1,5 +1,5 @@
 v0.1.8 -- 2014-05-02
-  * Fix strut token tag value from recent LendingClub site change (issue #10)
+  * Attempt to blindly fix issue 21: https://github.com/jgillick/LendingClubAutoInvestor/issues/21
 
 v0.1.7 -- 2014-02-05
   * Fix strut token tag value from recent LendingClub site change (issue #10)
