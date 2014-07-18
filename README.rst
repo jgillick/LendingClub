@@ -164,6 +164,32 @@ Invest in a list of loans in one action::
     1861880
 
 
+Get More Note Details
+~~~~~~~~~~~~~~~~~~~~~
+When browsing notes, you can get more details about a note by requesting the "loanDetailAj.action" URL::
+
+    >>> import pprint as pp
+    >>> from lendingclub import LendingClub
+    >>> from lendingclub.filters import Filter
+    >>> lc = LendingClub()
+    >>> lc.authenticate()
+    True
+    >>> filters = Filter()
+    >>> filters['grades']['B'] = True
+    >>> results = lc.search(filters)
+    >>> load_id = results['loans'][0]['loan_id']
+    >>> request = lc.session.get('/browse/loanDetailAj.action', query={'loan_id': load_id} )
+    >>> details = request.json()
+    >>> pp.pprint(details)
+    {u'DTI': u'21.24',
+     u'amountDelinquent': u'$0.00',
+     u'collectionsExcludingMedical': u'0',
+     u'completeTenure': u'10+ years',
+     u'creditDateShort': u'7/14/14',
+     ...
+     u'verifiedIncome': u'false'}
+
+
 Pro Tips
 --------
 
