@@ -8,25 +8,28 @@ Disclaimer
 
 I have tested this tool to the best of my ability, but understand that it may have bugs. Use at your own risk!
 
-Requirements
+Dependencies
 ------------
 
-The following Python libraries are required:
+The following Python libraries are required (ignore if installing with pip):
 
 * `requests <http://docs.python-requests.org/en/latest/>`_
 * `beautifulsoup4 <http://www.crummy.com/software/BeautifulSoup/>`_
 * `html5lib <https://github.com/html5lib/html5lib-python>`_
 * `pybars <https://github.com/wbond/pybars>`_
 
-These can automatically be installed with `pip <http://www.pip-installer.org/en/latest/>`_::
 
-    sudo pip install requests beautifulsoup4 html5lib pybars
+Install with PIP
+----------------
 
+The easiest way to install is with `pip <http://www.pip-installer.org/en/latest/>`_::
 
-Install
--------
+    sudo pip install lendingclub
 
-To install, run::
+Install Manually
+-----------------
+
+First make sure the dependencies are instaled and then run::
 
     sudo python ./setup.py install
 
