@@ -1213,7 +1213,7 @@ class Order:
 
             # Process HTML for the order ID
             html = response.text
-            soup = BeautifulSoup(html)
+            soup = BeautifulSoup(html, 'html5lib')
 
             # Order num
             order_field = soup.find(id='order_id')

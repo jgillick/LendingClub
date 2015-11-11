@@ -1,3 +1,6 @@
+v0.1.9 -- 2015-11-11
+  * Remove the BeautifulSoup warning by including a parser
+
 v0.1.8 -- 2014-05-02
   * Attempt to blindly fix issue 21: https://github.com/jgillick/LendingClubAutoInvestor/issues/21
 
