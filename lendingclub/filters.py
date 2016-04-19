@@ -264,7 +264,7 @@ class Filter(dict):
 
     def validate_one(self, loan):
         """
-        Validate a single result record to the filters
+        Validate a single loan result record against the filters
 
         Parameters
         ----------
@@ -314,7 +314,7 @@ class Filter(dict):
                 raise FilterValidationError(loan=loan, criteria='grade')
 
         # Term
-        if 'term' in self:
+        if 'term' in self and self['term'] is not None:
             if loan['loanLength'] == 36 and self['term']['Year3'] is False:
                 raise FilterValidationError(loan=loan, criteria='loan term')
             elif loan['loanLength'] == 60 and self['term']['Year5'] is False:
@@ -601,6 +601,10 @@ class SavedFilter(Filter):
                     if 'm_value' in f:
                         raw_values = f['m_value']
                         value = {}
+
+                        # No value, skip it
+                        if raw_values is None:
+                            continue
 
                         # Loop through multiple values
                         if type(raw_values) is list:

@@ -1,3 +1,6 @@
+v0.1.10 -- 2016-04-19
+  * Don't add null filters. (fixes investing errors in some cases)
+
 v0.1.9 -- 2015-11-11
   * Remove the BeautifulSoup warning by including a parser
 
